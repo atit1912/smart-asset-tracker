@@ -543,7 +543,7 @@ input, textarea, select { font-family: var(--font-thai); }
   background: var(--surface-0); z-index: 201;
   transform: translateX(100%);
   transition: transform .3s cubic-bezier(.2,.7,.3,1);
-  overflow-y: auto; box-shadow: var(--shadow-xl);
+  overflow: hidden; box-shadow: var(--shadow-xl);
   display: flex; flex-direction: column;
   border-left: 1px solid var(--border);
 }
@@ -1059,6 +1059,10 @@ input, textarea, select { font-family: var(--font-thai); }
   display: flex; background: var(--surface-1);
   border-bottom: 1px solid var(--border);
   overflow-x: auto; gap: 0;
+  flex-shrink: 0;
+}
+.ptab-scroll {
+  flex: 1; overflow-y: auto;
 }
 .panel-tabs::-webkit-scrollbar { display: none; }
 .ptab {
@@ -1077,7 +1081,7 @@ input, textarea, select { font-family: var(--font-thai); }
 
 /* ── Tab panes ───────────────────────────────────────── */
 .ptab-pane { display: none; }
-.ptab-pane.active { display: block; }
+.ptab-pane.active { display: block; min-height: 100%; }
 
 /* ── Hero ────────────────────────────────────────────── */
 .ap-hero {
@@ -1483,15 +1487,17 @@ input, textarea, select { font-family: var(--font-thai); }
     <button class="ptab" onclick="switchPTab('photos',this)">รูปภาพ</button>
     <button class="ptab" onclick="switchPTab('timeline',this)">Timeline</button>
   </div>
-  <!-- Tab panes -->
-  <div id="ptab-info" class="ptab-pane active">
-    <div id="panel-body"></div>
-  </div>
-  <div id="ptab-photos" class="ptab-pane">
-    <div id="panel-photos"></div>
-  </div>
-  <div id="ptab-timeline" class="ptab-pane">
-    <div id="panel-timeline"></div>
+  <!-- Tab panes (scrollable) -->
+  <div class="ptab-scroll">
+    <div id="ptab-info" class="ptab-pane active">
+      <div id="panel-body"></div>
+    </div>
+    <div id="ptab-photos" class="ptab-pane">
+      <div id="panel-photos"></div>
+    </div>
+    <div id="ptab-timeline" class="ptab-pane">
+      <div id="panel-timeline"></div>
+    </div>
   </div>
 </div>
 
