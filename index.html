@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smart Asset Tracker</title>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBN8m0MjvGesvWiYZ1IV6kB4CxKBbapxu4",
+  authDomain: "smart-asset-tracker-95fa0.firebaseapp.com",
+  projectId: "smart-asset-tracker-95fa0",
+  storageBucket: "smart-asset-tracker-95fa0.firebasestorage.app",
+  messagingSenderId: "769509063848",
+  appId: "1:769509063848:web:d5edaad2d7b09927d2169d"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ── State ──────────────────────────────────────────────
+let ALL = [];
+let filtered = [];
+let currentAsset = null;
+let metaCache = {};
+let liveTimer = null;
+
+// ── Depreciation calc ──────────────────────────────────
+const DAY = 86400000;
+function daysInMonth(d){ return new Date(d.getFullYear(),d.getMonth()+1,0).getDate(); }
+
+function calc(a, now){
+  const base = a.acq - a.scrap;
+  const cap = new Date(a.cap + 'T00:00:00');
+  const totalDays = a.life * 365;
+  let days = Math.floor((now - cap) / DAY);
+  let future = days < 0;
+  if(days < 0) days = 0;
+  if(base <= 0){
+    return { acq:a.acq, accu:a.acq-a.scrap, book:a.scrap, pct:100, monthly:0, annual:0, done:true, future, cap, totalDays, daysUsed:days };
+  }
+  const daily = base / totalDays;
+  let accu = daily * days;
+  let done = false;
+  if(accu >= base){ accu = base; done = true; }
+  const book = a.acq - accu;
+  const pct = Math.min(100, days / totalDays * 100);
+  const monthly = done ? 0 : daily * daysInMonth(now);
+  const annual  = done ? 0 : daily * 365;
+  return { acq:a.acq, accu, book, pct, monthly, annual, done, future, cap, totalDays, daysUsed:days, daily };
+}
+
+// ── Formatters ─────────────────────────────────────────
+const fmt  = n => (+n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt0 = n => (+n).toLocaleString('en-US',{maximumFractionDigits:0});
+function thDate(d){ return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+function esc(s){ return String(s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+function clock(d){ return d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+
+// ── Dashboard summary ──────────────────────────────────
+function renderDashboard(){
+  const now = new Date();
+  let totalAcq=0, totalBook=0, totalDep=0, cntDone=0, cntActive=0, cntFuture=0;
+  const grpMap = {};
+  ALL.forEach(a => {
+    const c = calc(a, now);
+    totalAcq  += c.acq;
+    totalBook += c.book;
+    totalDep  += c.accu;
+    if(c.done) cntDone++;
+    else if(c.future) cntFuture++;
+    else cntActive++;
+    const g = a.grp.replace(/^\d+\./,'');
+    if(!grpMap[g]) grpMap[g] = {acq:0,book:0,count:0};
+    grpMap[g].acq   += c.acq;
+    grpMap[g].book  += c.book;
+    grpMap[g].count += 1;
+  });
+
+  const grpRows = Object.entries(grpMap).sort((a,b)=>b[1].acq-a[1].acq).map(([g,v])=>{
+    const pct = v.acq>0 ? (v.book/v.acq*100).toFixed(1) : '0.0';
+    const barPct = v.acq>0 ? (v.book/v.acq*100) : 0;
+    return `<tr>
+      <td>${esc(g)}</td>
+      <td class="mono r">${fmt0(v.count)}</td>
+      <td class="mono r">${fmt(v.acq)}</td>
+      <td class="mono r">${fmt(v.book)}</td>
+      <td>
+        <div class="mini-bar"><div class="mini-fill" style="width:${barPct}%"></div></div>
+        <span class="pct-txt">${pct}%</span>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('dash').innerHTML = `
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-k">ทรัพย์สินทั้งหมด</div><div class="kpi-v mono">${fmt0(ALL.length)} รายการ</div></div>
+      <div class="kpi"><div class="kpi-k">มูลค่าซื้อรวม</div><div class="kpi-v mono">${fmt(totalAcq)}</div><div class="kpi-u">บาท</div></div>
+      <div class="kpi"><div class="kpi-k">มูลค่าตามบัญชีรวม (สด)</div><div class="kpi-v mono live-val">${fmt(totalBook)}</div><div class="kpi-u">บาท</div></div>
+      <div class="kpi"><div class="kpi-k">ค่าเสื่อมสะสมรวม</div><div class="kpi-v mono">${fmt(totalDep)}</div><div class="kpi-u">บาท</div></div>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi active-kpi"><div class="kpi-k">กำลังตัดค่าเสื่อม</div><div class="kpi-v mono">${cntActive}</div></div>
+      <div class="kpi done-kpi"><div class="kpi-k">หมดอายุทางบัญชีแล้ว</div><div class="kpi-v mono">${cntDone}</div></div>
+      <div class="kpi future-kpi"><div class="kpi-k">ยังไม่เริ่มตัด</div><div class="kpi-v mono">${cntFuture}</div></div>
+    </div>
+    <h3 class="sec-title">มูลค่าแยกตามกลุ่มทรัพย์สิน</h3>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>กลุ่มทรัพย์สิน</th><th class="r">จำนวน</th><th class="r">ต้นทุนรวม (บาท)</th><th class="r">คงเหลือ (บาท)</th><th>% คงเหลือ</th></tr></thead>
+        <tbody>${grpRows}</tbody>
+      </table>
+    </div>`;
+}
+
+// ── Filter & list ──────────────────────────────────────
+function applyFilters(){
+  const q    = document.getElementById('fq').value.trim().toLowerCase();
+  const grp  = document.getElementById('fgrp').value;
+  const stat = document.getElementById('fstat').value;
+  const now  = new Date();
+  filtered = ALL.filter(a => {
+    if(q && !a.asset.includes(q) && !a.desc.toLowerCase().includes(q)) return false;
+    if(grp && a.grp !== grp) return false;
+    if(stat){
+      const c = calc(a, now);
+      if(stat === 'active' && (c.done || c.future)) return false;
+      if(stat === 'done'   && !c.done) return false;
+      if(stat === 'future' && !c.future) return false;
+    }
+    return true;
+  });
+  renderList();
+}
+
+function renderList(){
+  const now = new Date();
+  const tbody = document.getElementById('list-body');
+  if(filtered.length === 0){
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:#8A8F99">ไม่พบรายการที่ตรงกัน</td></tr>`;
+    document.getElementById('list-count').textContent = '0 รายการ';
+    return;
+  }
+  document.getElementById('list-count').textContent = filtered.length.toLocaleString() + ' รายการ';
+  tbody.innerHTML = filtered.slice(0,200).map(a => {
+    const c = calc(a, now);
+    const statusTag = c.done
+      ? `<span class="stag done">หมดอายุ</span>`
+      : c.future ? `<span class="stag future">ยังไม่เริ่ม</span>`
+      : `<span class="stag active">กำลังตัด</span>`;
+    return `<tr class="list-row" data-id="${esc(a.asset)}">
+      <td class="mono">${esc(a.asset)}</td>
+      <td>${esc(a.desc)}</td>
+      <td>${esc(a.grp.replace(/^\d+\./,''))}</td>
+      <td class="mono r">${fmt(c.book)}</td>
+      <td class="mono r">${thDate(new Date(a.cap+'T00:00:00'))}</td>
+      <td>${statusTag}</td>
+    </tr>`;
+  }).join('');
+  if(filtered.length > 200){
+    tbody.innerHTML += `<tr><td colspan="6" style="text-align:center;padding:14px;color:#8A8F99;font-size:13px">แสดง 200 รายการแรก (ทั้งหมด ${filtered.length} รายการ) — กรองเพิ่มเพื่อดูทั้งหมด</td></tr>`;
+  }
+  document.querySelectorAll('.list-row').forEach(tr => {
+    tr.onclick = () => openDetail(tr.dataset.id);
+  });
+}
+
+// ── Detail panel ───────────────────────────────────────
+async function openDetail(assetId){
+  const a = ALL.find(x => x.asset === assetId);
+  if(!a) return;
+  currentAsset = a;
+
+  // load meta from firestore
+  let meta = metaCache[assetId] || { loc:'', note:'' };
+  try {
+    const snap = await getDoc(doc(db, 'asset_meta', assetId));
+    if(snap.exists()) meta = snap.data();
+    metaCache[assetId] = meta;
+  } catch(e){}
+
+  showDetail(a, meta);
+  document.getElementById('detail-panel').classList.add('open');
+  document.getElementById('overlay').classList.add('show');
+  if(liveTimer) clearInterval(liveTimer);
+  liveTimer = setInterval(()=> tickDetail(a), 1000);
+}
+
+function showDetail(a, meta){
+  const now = new Date();
+  const c = calc(a, now);
+  const grpShort = a.grp.replace(/^\d+\./,'');
+  const capDate = new Date(a.cap+'T00:00:00');
+  const endDate = new Date(capDate.getTime() + c.totalDays * DAY);
+
+  document.getElementById('detail-inner').innerHTML = `
+    <div class="d-head">
+      <div class="d-tags">
+        <span class="dtag grp">${esc(grpShort)}</span>
+        <span class="dtag">${esc(a.cca)}</span>
+      </div>
+      <div class="d-id"><span class="d-label">Asset</span><span class="d-num mono">${esc(a.asset)}</span></div>
+      <div class="d-desc">${esc(a.desc)}</div>
+    </div>
+
+    <div class="d-grid">
+      <div class="d-cell"><div class="dk">บริษัท</div><div class="dv">${esc(a.company)}</div></div>
+      <div class="d-cell"><div class="dk">หน่วยงาน</div><div class="dv">${esc(a.mis)}</div></div>
+      <div class="d-cell"><div class="dk">วันที่ได้มา</div><div class="dv mono">${thDate(capDate)}</div></div>
+      <div class="d-cell"><div class="dk">อายุการใช้งาน</div><div class="dv mono">${a.life} ปี</div></div>
+      <div class="d-cell"><div class="dk">มูลค่าซาก</div><div class="dv mono">${fmt(a.scrap)} บาท</div></div>
+      <div class="d-cell"><div class="dk">ผ่านมาแล้ว</div><div class="dv mono">${fmt0(c.daysUsed)} วัน</div></div>
+    </div>
+
+    <div class="d-fin">
+      <div class="d-fin-top">
+        <span class="d-fin-title">มูลค่าและค่าเสื่อมราคา</span>
+        <span class="live-badge"><span class="pulse"></span>สด · <span id="dclock">${clock(now)}</span></span>
+      </div>
+      <div class="d-money-grid">
+        <div class="dmoney"><div class="dk">มูลค่าซื้อ</div><div class="damt mono">${fmt(c.acq)} <span class="dunit">บาท</span></div></div>
+        <div class="dmoney"><div class="dk">ค่าเสื่อมสะสม</div><div class="damt mono" id="d-accu">${fmt(c.accu)} <span class="dunit">บาท</span></div></div>
+        <div class="dmoney"><div class="dk">ค่าเสื่อม/เดือนนี้</div><div class="damt mono">${fmt(c.monthly)} <span class="dunit">บาท</span></div></div>
+        <div class="dmoney"><div class="dk">ค่าเสื่อม/ปี</div><div class="damt mono">${fmt(c.annual)} <span class="dunit">บาท</span></div></div>
+      </div>
+      <div class="d-book ${c.done?'done':''}">
+        <div><div class="dk">มูลค่าตามบัญชีปัจจุบัน</div><div class="d-book-val mono" id="d-book">${fmt(c.book)}<span class="dunit"> บาท</span></div></div>
+        <div>${c.done
+          ? '<span class="stag done">หมดอายุทางบัญชีแล้ว</span>'
+          : c.future ? '<span class="stag future">ยังไม่เริ่มตัดค่าเสื่อม</span>'
+          : '<span class="stag active">กำลังตัดค่าเสื่อม</span>'}</div>
+      </div>
+      <div class="gauge">
+        <div class="gauge-meta"><span>อายุที่ใช้ไป</span><span class="mono" id="d-pct">${c.pct.toFixed(1)}%</span></div>
+        <div class="bar ${c.done?'done':''}"><div class="fill" id="d-bar" style="width:${c.pct}%"></div></div>
+        <div class="gauge-foot">
+          <span>${thDate(capDate)}</span>
+          <span>${c.done ? 'ครบอายุแล้ว' : 'เหลือ '+fmt0(Math.max(0,(c.totalDays-c.daysUsed)/365))+' ปี'}</span>
+          <span>${thDate(endDate)}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-edit">
+      <div class="d-edit-head"><span class="d-fin-title">ข้อมูลภาคสนาม</span><span class="editable-pill">แก้ไขได้ · บันทึกส่วนกลาง</span></div>
+      <div class="ef"><label>สถานที่เก็บทรัพย์สิน</label>
+        <input id="d-loc" placeholder="เช่น อาคารซ่อมบำรุง ชั้น 1 โซน B" value="${esc(meta.loc||'')}"></div>
+      <div class="ef"><label>หมายเหตุ</label>
+        <textarea id="d-note" placeholder="เช่น ย้ายมาจากโรงเรือน 3 เมื่อ มี.ค. 2026">${esc(meta.note||'')}</textarea></div>
+      <div class="edit-actions">
+        <button class="save-btn" onclick="saveMeta('${esc(a.asset)}')">บันทึก</button>
+        <span class="saved-msg" id="d-saved">✓ บันทึกแล้ว — ทุกคนเห็นข้อมูลนี้แล้ว</span>
+      </div>
+    </div>`;
+}
+
+function tickDetail(a){
+  const now = new Date();
+  const c = calc(a, now);
+  const el = id => document.getElementById(id);
+  if(el('dclock'))  el('dclock').textContent  = clock(now);
+  if(el('d-book'))  el('d-book').innerHTML    = fmt(c.book)+'<span class="dunit"> บาท</span>';
+  if(el('d-accu'))  el('d-accu').innerHTML    = fmt(c.accu)+'<span class="dunit"> บาท</span>';
+  if(el('d-pct'))   el('d-pct').textContent   = c.pct.toFixed(1)+'%';
+  if(el('d-bar'))   el('d-bar').style.width   = c.pct+'%';
+}
+
+window.saveMeta = async function(assetId){
+  const loc  = document.getElementById('d-loc').value;
+  const note = document.getElementById('d-note').value;
+  const saved = document.getElementById('d-saved');
+  try {
+    await setDoc(doc(db,'asset_meta',assetId),{ loc, note, updatedAt: new Date().toISOString() });
+    metaCache[assetId] = { loc, note };
+    saved.classList.add('show');
+    setTimeout(()=> saved.classList.remove('show'), 2500);
+  } catch(e){ alert('บันทึกไม่สำเร็จ: '+e.message); }
+};
+
+function closeDetail(){
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+  if(liveTimer){ clearInterval(liveTimer); liveTimer=null; }
+  currentAsset = null;
+}
+
+// ── Init ───────────────────────────────────────────────
+async function init(){
+  document.getElementById('loading').style.display = 'flex';
+  try {
+    const snap = await getDocs(collection(db,'assets'));
+    ALL = [];
+    snap.forEach(d => ALL.push(d.data()));
+    ALL.sort((a,b)=> +a.asset - +b.asset);
+
+    // populate group filter
+    const grps = [...new Set(ALL.map(a=>a.grp))].sort();
+    const sel = document.getElementById('fgrp');
+    grps.forEach(g => { const o=document.createElement('option'); o.value=g; o.textContent=g.replace(/^\d+\./,''); sel.appendChild(o); });
+
+    filtered = [...ALL];
+    renderDashboard();
+    renderList();
+    document.getElementById('loading').style.display = 'none';
+
+    // live clock on dashboard
+    setInterval(renderDashboard, 60000); // refresh summary every minute
+  } catch(e){
+    document.getElementById('loading').innerHTML = `<div style="text-align:center"><div style="font-size:32px">⚠️</div><p style="color:#B23A48">เชื่อมต่อ Firestore ไม่ได้<br><small>${e.message}</small></p></div>`;
+  }
+}
+
+// ── Tab switching ──────────────────────────────────────
+window.switchTab = function(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelector('.tab[data-tab="'+tab+'"]').classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+};
+
+window.applyFilters = applyFilters;
+window.openDetail   = openDetail;
+window.closeDetail  = closeDetail;
+window.clearFilters = function(){
+  document.getElementById('fq').value='';
+  document.getElementById('fgrp').value='';
+  document.getElementById('fstat').value='';
+  applyFilters();
+};
+
+init();
+</script>
+<style>
+:root{
+  --ink:#16243A;--paper:#F8F7F3;--card:#fff;--line:#E5E1D7;--line2:#D4CFC2;
+  --muted:#5C6675;--faint:#8A8F99;
+  --live:#2A7F62;--live-soft:#E8F2ED;
+  --alert:#B23A48;--alert-soft:#F7E9EA;
+  --warn:#9A6A00;--warn-soft:#FBF1D9;
+  --shadow:0 2px 4px rgba(22,36,58,.04),0 12px 40px rgba(22,36,58,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"IBM Plex Sans Thai","Sarabun",system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:15px;line-height:1.55}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+/* ── Top bar ── */
+.topbar{background:var(--ink);color:#fff;padding:0 24px;display:flex;align-items:center;gap:0;height:56px;position:sticky;top:0;z-index:100}
+.topbar-brand{font-size:15px;font-weight:600;letter-spacing:-.01em;margin-right:32px;white-space:nowrap}
+.topbar-brand span{opacity:.5;font-weight:400}
+.tabs{display:flex;gap:2px;flex:1}
+.tab{padding:10px 18px;border:none;background:none;color:rgba(255,255,255,.55);font-size:14px;font-weight:500;cursor:pointer;border-radius:8px;transition:all .15s;font-family:inherit}
+.tab:hover{color:#fff;background:rgba(255,255,255,.08)}
+.tab.active{color:#fff;background:rgba(255,255,255,.14)}
+.topbar-clock{font-family:"IBM Plex Mono",monospace;font-size:12px;color:rgba(255,255,255,.4);margin-left:auto;white-space:nowrap}
+
+/* ── Layout ── */
+.main{max-width:1100px;margin:0 auto;padding:28px 20px 80px}
+.tab-content{display:none}.tab-content.active{display:block}
+
+/* ── KPI ── */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.kpi-k{font-size:12px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.kpi-v{font-size:22px;font-weight:600;line-height:1.1}
+.kpi-u{font-size:11px;color:var(--faint);margin-top:2px}
+.live-val{color:var(--live)}
+.active-kpi .kpi-v{color:var(--live)}
+.done-kpi .kpi-v{color:var(--alert)}
+.future-kpi .kpi-v{color:var(--warn)}
+.sec-title{font-size:14px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:24px 0 12px}
+
+/* ── Tables ── */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.data-table{width:100%;border-collapse:collapse;font-size:14px}
+.data-table th{padding:11px 16px;text-align:left;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);background:#FAFAF7;border-bottom:1px solid var(--line)}
+.data-table td{padding:11px 16px;border-bottom:1px solid var(--line)}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tbody tr:hover{background:#FAFAF7;cursor:pointer}
+.r{text-align:right}
+.mini-bar{display:inline-block;width:80px;height:6px;background:#EEEBE3;border-radius:3px;vertical-align:middle;margin-right:6px;overflow:hidden}
+.mini-fill{height:100%;background:var(--live);border-radius:3px}
+.pct-txt{font-size:12px;color:var(--muted)}
+
+/* ── Filter bar ── */
+.filter-bar{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.filter-bar input,.filter-bar select{font-family:inherit;font-size:14px;color:var(--ink);background:#FAFAF7;border:1.5px solid var(--line);border-radius:9px;padding:8px 12px;outline:none;transition:border-color .15s}
+.filter-bar input{flex:1;min-width:180px}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--ink);background:#fff}
+.filter-bar select{cursor:pointer}
+.clear-btn{border:none;background:none;font-size:13px;color:var(--faint);cursor:pointer;padding:8px 4px;font-family:inherit}
+.clear-btn:hover{color:var(--ink)}
+.list-count{font-size:13px;color:var(--muted);margin-bottom:10px;font-weight:500}
+
+/* ── Status tags ── */
+.stag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;white-space:nowrap}
+.stag.active{background:var(--live-soft);color:var(--live)}
+.stag.done{background:var(--alert-soft);color:var(--alert)}
+.stag.future{background:var(--warn-soft);color:var(--warn)}
+
+/* ── Overlay & detail panel ── */
+#overlay{position:fixed;inset:0;background:rgba(22,36,58,.35);z-index:200;opacity:0;pointer-events:none;transition:opacity .25s}
+#overlay.show{opacity:1;pointer-events:all}
+#detail-panel{position:fixed;top:0;right:0;width:min(520px,100vw);height:100vh;background:var(--card);z-index:201;transform:translateX(100%);transition:transform .3s cubic-bezier(.2,.7,.3,1);overflow-y:auto;box-shadow:-8px 0 40px rgba(22,36,58,.12)}
+#detail-panel.open{transform:none}
+.d-close{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;z-index:10}
+.d-close-btn{border:none;background:#F1EEE6;color:var(--ink);padding:7px 14px;border-radius:8px;font-family:inherit;font-size:13px;cursor:pointer;font-weight:500}
+
+/* ── Detail content ── */
+.d-head{padding:20px 22px 18px;border-bottom:1px solid var(--line)}
+.d-tags{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+.dtag{font-size:12px;font-weight:500;padding:3px 10px;border-radius:16px;background:#F1EEE6;color:var(--muted)}
+.dtag.grp{background:var(--ink);color:#fff}
+.d-id{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.d-label{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.d-num{font-size:30px;font-weight:600}
+.d-desc{font-size:17px;font-weight:500;margin-top:5px}
+.d-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+.d-cell{background:#fff;padding:13px 22px}
+.dk{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:600;margin-bottom:2px}
+.dv{font-size:14.5px;font-weight:500}
+.d-fin{padding:20px 22px;background:linear-gradient(180deg,#fff,#FCFBF8);border-top:1px solid var(--line)}
+.d-fin-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.d-fin-title{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.live-badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:500;color:var(--live);background:var(--live-soft);padding:4px 10px;border-radius:16px;font-family:"IBM Plex Mono",monospace}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--live);animation:pulse 1.6s ease-in-out infinite;flex:none}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+.d-money-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 20px;margin-bottom:16px}
+.dmoney .damt{font-size:18px;font-weight:500;margin-top:3px}
+.dunit{font-size:11px;color:var(--faint);font-weight:400}
+.d-book{border-top:1px dashed var(--line2);padding-top:14px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px}
+.d-book-val{font-size:34px;font-weight:700;color:var(--live);line-height:1}
+.d-book.done .d-book-val{color:var(--alert)}
+.gauge{margin-top:18px}
+.gauge-meta{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px}
+.bar{height:10px;background:#EEEBE3;border-radius:5px;overflow:hidden}
+.bar .fill{height:100%;background:linear-gradient(90deg,#3A9A78,var(--live));border-radius:5px;transition:width .8s cubic-bezier(.2,.7,.3,1)}
+.bar.done .fill{background:linear-gradient(90deg,#C85A66,var(--alert))}
+.gauge-foot{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin-top:5px}
+.d-edit{padding:20px 22px;border-top:1px solid var(--line);background:#fff}
+.d-edit-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.editable-pill{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--warn);background:var(--warn-soft);padding:3px 7px;border-radius:5px}
+.ef{margin-bottom:12px}
+.ef label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:5px}
+.ef input,.ef textarea{width:100%;font-family:inherit;font-size:14px;color:var(--ink);background:#FAFAF7;border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;outline:none;resize:vertical;transition:border-color .15s}
+.ef textarea{min-height:58px}
+.ef input:focus,.ef textarea:focus{border-color:var(--ink);background:#fff}
+.ef input::placeholder,.ef textarea::placeholder{color:#B4B8C0}
+.edit-actions{display:flex;align-items:center;gap:12px;margin-top:14px}
+.save-btn{border:none;cursor:pointer;background:var(--live);color:#fff;font-family:inherit;font-size:14px;font-weight:500;padding:9px 20px;border-radius:9px;transition:background .15s}
+.save-btn:hover{background:#236b53}
+.saved-msg{font-size:13px;color:var(--live);font-weight:500;opacity:0;transition:opacity .25s}
+.saved-msg.show{opacity:1}
+
+/* ── Loading ── */
+#loading{position:fixed;inset:0;background:var(--paper);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+.spinner{width:36px;height:36px;border:3px solid var(--line);border-top-color:var(--ink);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:600px){
+  .topbar{padding:0 14px}
+  .tab{padding:10px 12px;font-size:13px}
+  .main{padding:16px 12px 60px}
+  .d-money-grid{grid-template-columns:1fr}
+  .d-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div style="color:var(--muted);font-size:14px">กำลังโหลดข้อมูลจาก Firebase...</div>
+</div>
+
+<div id="overlay" onclick="closeDetail()"></div>
+
+<!-- Detail Panel -->
+<div id="detail-panel">
+  <div class="d-close">
+    <span style="font-size:14px;font-weight:600;color:var(--muted)">รายละเอียดทรัพย์สิน</span>
+    <button class="d-close-btn" onclick="closeDetail()">✕ ปิด</button>
+  </div>
+  <div id="detail-inner"></div>
+</div>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <div class="topbar-brand">Smart Asset <span>Tracker</span></div>
+  <div class="tabs">
+    <button class="tab active" data-tab="dash" onclick="switchTab('dash')">📊 ภาพรวม</button>
+    <button class="tab" data-tab="list" onclick="switchTab('list')">📋 รายการทรัพย์สิน</button>
+  </div>
+  <div class="topbar-clock" id="top-clock"></div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <!-- Dashboard Tab -->
+  <div class="tab-content active" id="tab-dash">
+    <div id="dash"></div>
+  </div>
+
+  <!-- List Tab -->
+  <div class="tab-content" id="tab-list">
+    <div class="filter-bar">
+      <input id="fq" placeholder="🔍  ค้นหาเลข Asset หรือชื่อ..." oninput="applyFilters()">
+      <select id="fgrp" onchange="applyFilters()"><option value="">— ทุกกลุ่ม —</option></select>
+      <select id="fstat" onchange="applyFilters()">
+        <option value="">— ทุกสถานะ —</option>
+        <option value="active">กำลังตัดค่าเสื่อม</option>
+        <option value="done">หมดอายุทางบัญชีแล้ว</option>
+        <option value="future">ยังไม่เริ่มตัด</option>
+      </select>
+      <button class="clear-btn" onclick="clearFilters()">ล้างตัวกรอง</button>
+    </div>
+    <div class="list-count" id="list-count">—</div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>เลข Asset</th>
+            <th>ชื่อทรัพย์สิน</th>
+            <th>กลุ่ม</th>
+            <th class="r">มูลค่าคงเหลือ (บาท)</th>
+            <th>วันที่ได้มา</th>
+            <th>สถานะ</th>
+          </tr>
+        </thead>
+        <tbody id="list-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// top clock (non-module)
+setInterval(()=>{
+  const el=document.getElementById('top-clock');
+  if(el) el.textContent=new Date().toLocaleString('th-TH',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+},1000);
+</script>
+</body>
+</html>
