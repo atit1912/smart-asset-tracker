@@ -1849,6 +1849,7 @@ function clearFilters(){document.getElementById('fq').value='';document.getEleme
 // ── Panel ─────────────────────────────────────────────
 // ── Photos & Timeline state ──────────────────────────
 var _photos = [];
+var _photoIds = [];
 var _timeline = [];
 var _lbIdx = 0;
 
@@ -1874,9 +1875,10 @@ async function openPanel(assetId){
   if(liveTimer)clearInterval(liveTimer);
   liveTimer=setInterval(function(){tickPanel(a);},1000);
 
-  // Load photos async
-  _photos=meta.photos||[];
+  // Load photos async from asset_photos collection
+  _photos=[];
   renderPhotos(assetId, _photos);
+  loadPhotos(assetId);
 
   // Load timeline async
   loadTimeline(assetId);
@@ -2139,6 +2141,28 @@ function closeQR(e){
 }
 
 // ── Photos ────────────────────────────────────────────
+async function loadPhotos(docId){
+  try{
+    var snap=await db.collection('asset_photos').where('assetId','==',docId).get();
+    var arr=[];
+    snap.forEach(function(d){ var x=d.data(); arr.push({id:d.id, data:x.data, order:x.order||0}); });
+    arr.sort(function(a,b){return a.order-b.order;});
+    _photos=arr.map(function(x){return x.data;});
+    _photoIds=arr.map(function(x){return x.id;});
+    renderPhotos(docId,_photos);
+    // Update cover
+    if(_photos.length){
+      var heroImgEl=document.querySelector('.ap-cover-img');
+      var placeholderEl=document.querySelector('.ap-cover-placeholder');
+      if(!heroImgEl&&placeholderEl){
+        var img=document.createElement('img');
+        img.className='ap-cover-img'; img.src=_photos[0]; img.alt='cover';
+        placeholderEl.parentNode.replaceChild(img,placeholderEl);
+      } else if(heroImgEl){ heroImgEl.src=_photos[0]; }
+    }
+  }catch(e){ console.error('loadPhotos error:',e); }
+}
+
 function renderPhotos(docId, photos){
   var el=document.getElementById('panel-photos');
   if(!el) return;
@@ -2178,30 +2202,44 @@ async function handlePhotoUpload(e, docId){
   var files=Array.from(e.target.files);
   if(!files.length) return;
   showToast('กำลังบีบอัดรูปภาพ...');
-  var newPhotos=[];
+  var saved=0, failed=0;
   for(var i=0;i<files.length;i++){
-    try{ newPhotos.push(await compressImage(files[i],800,0.75)); }
-    catch(err){ console.error(err); }
-  }
-  var meta=metaCache[docId]||{loc:'',note:''};
-  _photos=(meta.photos||[]).concat(newPhotos);
-  meta.photos=_photos;
-  try{
-    await db.collection('asset_meta').doc(docId).set(meta);
-    metaCache[docId]=meta;
-    renderPhotos(docId,_photos);
-    // Update cover in hero
-    if(_photos.length===1){
-      var heroImgEl=document.querySelector('.ap-cover-img');
-      var placeholderEl=document.querySelector('.ap-cover-placeholder');
-      if(!heroImgEl&&placeholderEl){
-        var img=document.createElement('img');
-        img.className='ap-cover-img'; img.src=_photos[0]; img.alt='cover';
-        placeholderEl.parentNode.replaceChild(img,placeholderEl);
-      } else if(heroImgEl){ heroImgEl.src=_photos[0]; }
+    try{
+      var dataUrl=await compressImage(files[i],700,0.62);
+      // Check size — Firestore field limit ~1MB, keep each photo well under
+      if(dataUrl.length > 900000){
+        // Too big, compress harder
+        dataUrl=await compressImage(files[i],560,0.5);
+      }
+      // Store each photo as its OWN document — avoids 1MB doc limit
+      var photoId=docId+'_'+Date.now()+'_'+i;
+      await db.collection('asset_photos').doc(photoId).set({
+        assetId: docId,
+        data: dataUrl,
+        order: (_photos.length+saved),
+        createdAt: new Date().toISOString()
+      });
+      _photos.push(dataUrl);
+      _photoIds.push(photoId);
+      saved++;
+    }catch(err){
+      console.error('Photo upload error:', err);
+      failed++;
     }
-    showToast('✓ บันทึกรูปภาพแล้ว '+newPhotos.length+' รูป');
-  }catch(err){ showToast('❌ บันทึกไม่สำเร็จ: '+err.message); }
+  }
+  renderPhotos(docId,_photos);
+  // Update cover in hero
+  if(_photos.length>=1){
+    var heroImgEl=document.querySelector('.ap-cover-img');
+    var placeholderEl=document.querySelector('.ap-cover-placeholder');
+    if(!heroImgEl&&placeholderEl){
+      var img=document.createElement('img');
+      img.className='ap-cover-img'; img.src=_photos[0]; img.alt='cover';
+      placeholderEl.parentNode.replaceChild(img,placeholderEl);
+    } else if(heroImgEl){ heroImgEl.src=_photos[0]; }
+  }
+  if(failed) showToast('บันทึก '+saved+' รูป · ล้มเหลว '+failed+' รูป');
+  else showToast('✓ บันทึกรูปภาพแล้ว '+saved+' รูป — ทุกเครื่องเห็นแล้ว');
 }
 
 function compressImage(file,maxDim,quality){
@@ -2231,14 +2269,17 @@ function compressImage(file,maxDim,quality){
 async function deletePhoto(e, docId, idx){
   e.stopPropagation();
   if(!confirm('ลบรูปนี้?')) return;
-  _photos.splice(idx,1);
-  var meta=metaCache[docId]||{};
-  meta.photos=_photos;
+  var photoId=_photoIds[idx];
   try{
-    await db.collection('asset_meta').doc(docId).set(meta);
-    metaCache[docId]=meta; renderPhotos(docId,_photos);
+    if(photoId) await db.collection('asset_photos').doc(photoId).delete();
+    _photos.splice(idx,1);
+    _photoIds.splice(idx,1);
+    renderPhotos(docId,_photos);
+    // Update cover
+    var heroImgEl=document.querySelector('.ap-cover-img');
+    if(_photos.length && heroImgEl){ heroImgEl.src=_photos[0]; }
     showToast('ลบรูปแล้ว');
-  }catch(err){ showToast('❌ ลบไม่สำเร็จ'); }
+  }catch(err){ showToast('❌ ลบไม่สำเร็จ: '+err.message); }
 }
 
 // ── Lightbox ──────────────────────────────────────────
