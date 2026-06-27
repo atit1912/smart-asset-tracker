@@ -2143,12 +2143,20 @@ function closeQR(e){
 // ── Photos ────────────────────────────────────────────
 async function loadPhotos(docId){
   try{
-    var snap=await db.collection('asset_photos').where('assetId','==',docId).get();
+    // Query photos for this asset - filter client-side as fallback if no index
+    var snap=await db.collection('asset_photos').get();
     var arr=[];
-    snap.forEach(function(d){ var x=d.data(); arr.push({id:d.id, data:x.data, order:x.order||0}); });
+    snap.forEach(function(d){
+      var x=d.data();
+      // Match by assetId field OR by doc ID prefix (both methods supported)
+      if(x.assetId===docId || d.id.indexOf(docId+'_')===0){
+        arr.push({id:d.id, data:x.data, order:x.order||0});
+      }
+    });
     arr.sort(function(a,b){return a.order-b.order;});
     _photos=arr.map(function(x){return x.data;});
     _photoIds=arr.map(function(x){return x.id;});
+    console.log('loadPhotos: found',arr.length,'photos for',docId);
     renderPhotos(docId,_photos);
     // Update cover
     if(_photos.length){
