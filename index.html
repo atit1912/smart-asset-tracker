@@ -1,544 +1,660 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Smart Asset Tracker</title>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBN8m0MjvGesvWiYZ1IV6kB4CxKBbapxu4",
-  authDomain: "smart-asset-tracker-95fa0.firebaseapp.com",
-  projectId: "smart-asset-tracker-95fa0",
-  storageBucket: "smart-asset-tracker-95fa0.firebasestorage.app",
-  messagingSenderId: "769509063848",
-  appId: "1:769509063848:web:d5edaad2d7b09927d2169d"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-// ── State ──────────────────────────────────────────────
-let ALL = [];
-let filtered = [];
-let currentAsset = null;
-let metaCache = {};
-let liveTimer = null;
-
-// ── Depreciation calc ──────────────────────────────────
-const DAY = 86400000;
-function daysInMonth(d){ return new Date(d.getFullYear(),d.getMonth()+1,0).getDate(); }
-
-function calc(a, now){
-  const base = a.acq - a.scrap;
-  const cap = new Date(a.cap + 'T00:00:00');
-  const totalDays = a.life * 365;
-  let days = Math.floor((now - cap) / DAY);
-  let future = days < 0;
-  if(days < 0) days = 0;
-  if(base <= 0){
-    return { acq:a.acq, accu:a.acq-a.scrap, book:a.scrap, pct:100, monthly:0, annual:0, done:true, future, cap, totalDays, daysUsed:days };
-  }
-  const daily = base / totalDays;
-  let accu = daily * days;
-  let done = false;
-  if(accu >= base){ accu = base; done = true; }
-  const book = a.acq - accu;
-  const pct = Math.min(100, days / totalDays * 100);
-  const monthly = done ? 0 : daily * daysInMonth(now);
-  const annual  = done ? 0 : daily * 365;
-  return { acq:a.acq, accu, book, pct, monthly, annual, done, future, cap, totalDays, daysUsed:days, daily };
-}
-
-// ── Formatters ─────────────────────────────────────────
-const fmt  = n => (+n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-const fmt0 = n => (+n).toLocaleString('en-US',{maximumFractionDigits:0});
-function thDate(d){ return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
-function esc(s){ return String(s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
-function clock(d){ return d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
-
-// ── Dashboard summary ──────────────────────────────────
-function renderDashboard(){
-  const now = new Date();
-  let totalAcq=0, totalBook=0, totalDep=0, cntDone=0, cntActive=0, cntFuture=0;
-  const grpMap = {};
-  ALL.forEach(a => {
-    const c = calc(a, now);
-    totalAcq  += c.acq;
-    totalBook += c.book;
-    totalDep  += c.accu;
-    if(c.done) cntDone++;
-    else if(c.future) cntFuture++;
-    else cntActive++;
-    const g = a.grp.replace(/^\d+\./,'');
-    if(!grpMap[g]) grpMap[g] = {acq:0,book:0,count:0};
-    grpMap[g].acq   += c.acq;
-    grpMap[g].book  += c.book;
-    grpMap[g].count += 1;
-  });
-
-  const grpRows = Object.entries(grpMap).sort((a,b)=>b[1].acq-a[1].acq).map(([g,v])=>{
-    const pct = v.acq>0 ? (v.book/v.acq*100).toFixed(1) : '0.0';
-    const barPct = v.acq>0 ? (v.book/v.acq*100) : 0;
-    return `<tr>
-      <td>${esc(g)}</td>
-      <td class="mono r">${fmt0(v.count)}</td>
-      <td class="mono r">${fmt(v.acq)}</td>
-      <td class="mono r">${fmt(v.book)}</td>
-      <td>
-        <div class="mini-bar"><div class="mini-fill" style="width:${barPct}%"></div></div>
-        <span class="pct-txt">${pct}%</span>
-      </td>
-    </tr>`;
-  }).join('');
-
-  document.getElementById('dash').innerHTML = `
-    <div class="kpi-row">
-      <div class="kpi"><div class="kpi-k">ทรัพย์สินทั้งหมด</div><div class="kpi-v mono">${fmt0(ALL.length)} รายการ</div></div>
-      <div class="kpi"><div class="kpi-k">มูลค่าซื้อรวม</div><div class="kpi-v mono">${fmt(totalAcq)}</div><div class="kpi-u">บาท</div></div>
-      <div class="kpi"><div class="kpi-k">มูลค่าตามบัญชีรวม (สด)</div><div class="kpi-v mono live-val">${fmt(totalBook)}</div><div class="kpi-u">บาท</div></div>
-      <div class="kpi"><div class="kpi-k">ค่าเสื่อมสะสมรวม</div><div class="kpi-v mono">${fmt(totalDep)}</div><div class="kpi-u">บาท</div></div>
-    </div>
-    <div class="kpi-row">
-      <div class="kpi active-kpi"><div class="kpi-k">กำลังตัดค่าเสื่อม</div><div class="kpi-v mono">${cntActive}</div></div>
-      <div class="kpi done-kpi"><div class="kpi-k">หมดอายุทางบัญชีแล้ว</div><div class="kpi-v mono">${cntDone}</div></div>
-      <div class="kpi future-kpi"><div class="kpi-k">ยังไม่เริ่มตัด</div><div class="kpi-v mono">${cntFuture}</div></div>
-    </div>
-    <h3 class="sec-title">มูลค่าแยกตามกลุ่มทรัพย์สิน</h3>
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead><tr><th>กลุ่มทรัพย์สิน</th><th class="r">จำนวน</th><th class="r">ต้นทุนรวม (บาท)</th><th class="r">คงเหลือ (บาท)</th><th>% คงเหลือ</th></tr></thead>
-        <tbody>${grpRows}</tbody>
-      </table>
-    </div>`;
-}
-
-// ── Filter & list ──────────────────────────────────────
-function applyFilters(){
-  const q    = document.getElementById('fq').value.trim().toLowerCase();
-  const grp  = document.getElementById('fgrp').value;
-  const stat = document.getElementById('fstat').value;
-  const now  = new Date();
-  filtered = ALL.filter(a => {
-    if(q && !a.asset.includes(q) && !a.desc.toLowerCase().includes(q)) return false;
-    if(grp && a.grp !== grp) return false;
-    if(stat){
-      const c = calc(a, now);
-      if(stat === 'active' && (c.done || c.future)) return false;
-      if(stat === 'done'   && !c.done) return false;
-      if(stat === 'future' && !c.future) return false;
-    }
-    return true;
-  });
-  renderList();
-}
-
-function renderList(){
-  const now = new Date();
-  const tbody = document.getElementById('list-body');
-  if(filtered.length === 0){
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:#8A8F99">ไม่พบรายการที่ตรงกัน</td></tr>`;
-    document.getElementById('list-count').textContent = '0 รายการ';
-    return;
-  }
-  document.getElementById('list-count').textContent = filtered.length.toLocaleString() + ' รายการ';
-  tbody.innerHTML = filtered.slice(0,200).map(a => {
-    const c = calc(a, now);
-    const statusTag = c.done
-      ? `<span class="stag done">หมดอายุ</span>`
-      : c.future ? `<span class="stag future">ยังไม่เริ่ม</span>`
-      : `<span class="stag active">กำลังตัด</span>`;
-    return `<tr class="list-row" data-id="${esc(a.asset)}">
-      <td class="mono">${esc(a.asset)}</td>
-      <td>${esc(a.desc)}</td>
-      <td>${esc(a.grp.replace(/^\d+\./,''))}</td>
-      <td class="mono r">${fmt(c.book)}</td>
-      <td class="mono r">${thDate(new Date(a.cap+'T00:00:00'))}</td>
-      <td>${statusTag}</td>
-    </tr>`;
-  }).join('');
-  if(filtered.length > 200){
-    tbody.innerHTML += `<tr><td colspan="6" style="text-align:center;padding:14px;color:#8A8F99;font-size:13px">แสดง 200 รายการแรก (ทั้งหมด ${filtered.length} รายการ) — กรองเพิ่มเพื่อดูทั้งหมด</td></tr>`;
-  }
-  document.querySelectorAll('.list-row').forEach(tr => {
-    tr.onclick = () => openDetail(tr.dataset.id);
-  });
-}
-
-// ── Detail panel ───────────────────────────────────────
-async function openDetail(assetId){
-  const a = ALL.find(x => x.asset === assetId);
-  if(!a) return;
-  currentAsset = a;
-
-  // load meta from firestore
-  let meta = metaCache[assetId] || { loc:'', note:'' };
-  try {
-    const snap = await getDoc(doc(db, 'asset_meta', assetId));
-    if(snap.exists()) meta = snap.data();
-    metaCache[assetId] = meta;
-  } catch(e){}
-
-  showDetail(a, meta);
-  document.getElementById('detail-panel').classList.add('open');
-  document.getElementById('overlay').classList.add('show');
-  if(liveTimer) clearInterval(liveTimer);
-  liveTimer = setInterval(()=> tickDetail(a), 1000);
-}
-
-function showDetail(a, meta){
-  const now = new Date();
-  const c = calc(a, now);
-  const grpShort = a.grp.replace(/^\d+\./,'');
-  const capDate = new Date(a.cap+'T00:00:00');
-  const endDate = new Date(capDate.getTime() + c.totalDays * DAY);
-
-  document.getElementById('detail-inner').innerHTML = `
-    <div class="d-head">
-      <div class="d-tags">
-        <span class="dtag grp">${esc(grpShort)}</span>
-        <span class="dtag">${esc(a.cca)}</span>
-      </div>
-      <div class="d-id"><span class="d-label">Asset</span><span class="d-num mono">${esc(a.asset)}</span></div>
-      <div class="d-desc">${esc(a.desc)}</div>
-    </div>
-
-    <div class="d-grid">
-      <div class="d-cell"><div class="dk">บริษัท</div><div class="dv">${esc(a.company)}</div></div>
-      <div class="d-cell"><div class="dk">หน่วยงาน</div><div class="dv">${esc(a.mis)}</div></div>
-      <div class="d-cell"><div class="dk">วันที่ได้มา</div><div class="dv mono">${thDate(capDate)}</div></div>
-      <div class="d-cell"><div class="dk">อายุการใช้งาน</div><div class="dv mono">${a.life} ปี</div></div>
-      <div class="d-cell"><div class="dk">มูลค่าซาก</div><div class="dv mono">${fmt(a.scrap)} บาท</div></div>
-      <div class="d-cell"><div class="dk">ผ่านมาแล้ว</div><div class="dv mono">${fmt0(c.daysUsed)} วัน</div></div>
-    </div>
-
-    <div class="d-fin">
-      <div class="d-fin-top">
-        <span class="d-fin-title">มูลค่าและค่าเสื่อมราคา</span>
-        <span class="live-badge"><span class="pulse"></span>สด · <span id="dclock">${clock(now)}</span></span>
-      </div>
-      <div class="d-money-grid">
-        <div class="dmoney"><div class="dk">มูลค่าซื้อ</div><div class="damt mono">${fmt(c.acq)} <span class="dunit">บาท</span></div></div>
-        <div class="dmoney"><div class="dk">ค่าเสื่อมสะสม</div><div class="damt mono" id="d-accu">${fmt(c.accu)} <span class="dunit">บาท</span></div></div>
-        <div class="dmoney"><div class="dk">ค่าเสื่อม/เดือนนี้</div><div class="damt mono">${fmt(c.monthly)} <span class="dunit">บาท</span></div></div>
-        <div class="dmoney"><div class="dk">ค่าเสื่อม/ปี</div><div class="damt mono">${fmt(c.annual)} <span class="dunit">บาท</span></div></div>
-      </div>
-      <div class="d-book ${c.done?'done':''}">
-        <div><div class="dk">มูลค่าตามบัญชีปัจจุบัน</div><div class="d-book-val mono" id="d-book">${fmt(c.book)}<span class="dunit"> บาท</span></div></div>
-        <div>${c.done
-          ? '<span class="stag done">หมดอายุทางบัญชีแล้ว</span>'
-          : c.future ? '<span class="stag future">ยังไม่เริ่มตัดค่าเสื่อม</span>'
-          : '<span class="stag active">กำลังตัดค่าเสื่อม</span>'}</div>
-      </div>
-      <div class="gauge">
-        <div class="gauge-meta"><span>อายุที่ใช้ไป</span><span class="mono" id="d-pct">${c.pct.toFixed(1)}%</span></div>
-        <div class="bar ${c.done?'done':''}"><div class="fill" id="d-bar" style="width:${c.pct}%"></div></div>
-        <div class="gauge-foot">
-          <span>${thDate(capDate)}</span>
-          <span>${c.done ? 'ครบอายุแล้ว' : 'เหลือ '+fmt0(Math.max(0,(c.totalDays-c.daysUsed)/365))+' ปี'}</span>
-          <span>${thDate(endDate)}</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="d-edit">
-      <div class="d-edit-head"><span class="d-fin-title">ข้อมูลภาคสนาม</span><span class="editable-pill">แก้ไขได้ · บันทึกส่วนกลาง</span></div>
-      <div class="ef"><label>สถานที่เก็บทรัพย์สิน</label>
-        <input id="d-loc" placeholder="เช่น อาคารซ่อมบำรุง ชั้น 1 โซน B" value="${esc(meta.loc||'')}"></div>
-      <div class="ef"><label>หมายเหตุ</label>
-        <textarea id="d-note" placeholder="เช่น ย้ายมาจากโรงเรือน 3 เมื่อ มี.ค. 2026">${esc(meta.note||'')}</textarea></div>
-      <div class="edit-actions">
-        <button class="save-btn" onclick="saveMeta('${esc(a.asset)}')">บันทึก</button>
-        <span class="saved-msg" id="d-saved">✓ บันทึกแล้ว — ทุกคนเห็นข้อมูลนี้แล้ว</span>
-      </div>
-    </div>`;
-}
-
-function tickDetail(a){
-  const now = new Date();
-  const c = calc(a, now);
-  const el = id => document.getElementById(id);
-  if(el('dclock'))  el('dclock').textContent  = clock(now);
-  if(el('d-book'))  el('d-book').innerHTML    = fmt(c.book)+'<span class="dunit"> บาท</span>';
-  if(el('d-accu'))  el('d-accu').innerHTML    = fmt(c.accu)+'<span class="dunit"> บาท</span>';
-  if(el('d-pct'))   el('d-pct').textContent   = c.pct.toFixed(1)+'%';
-  if(el('d-bar'))   el('d-bar').style.width   = c.pct+'%';
-}
-
-window.saveMeta = async function(assetId){
-  const loc  = document.getElementById('d-loc').value;
-  const note = document.getElementById('d-note').value;
-  const saved = document.getElementById('d-saved');
-  try {
-    await setDoc(doc(db,'asset_meta',assetId),{ loc, note, updatedAt: new Date().toISOString() });
-    metaCache[assetId] = { loc, note };
-    saved.classList.add('show');
-    setTimeout(()=> saved.classList.remove('show'), 2500);
-  } catch(e){ alert('บันทึกไม่สำเร็จ: '+e.message); }
-};
-
-function closeDetail(){
-  document.getElementById('detail-panel').classList.remove('open');
-  document.getElementById('overlay').classList.remove('show');
-  if(liveTimer){ clearInterval(liveTimer); liveTimer=null; }
-  currentAsset = null;
-}
-
-// ── Init ───────────────────────────────────────────────
-async function init(){
-  document.getElementById('loading').style.display = 'flex';
-  try {
-    const snap = await getDocs(collection(db,'assets'));
-    ALL = [];
-    snap.forEach(d => ALL.push(d.data()));
-    ALL.sort((a,b)=> +a.asset - +b.asset);
-
-    // populate group filter
-    const grps = [...new Set(ALL.map(a=>a.grp))].sort();
-    const sel = document.getElementById('fgrp');
-    grps.forEach(g => { const o=document.createElement('option'); o.value=g; o.textContent=g.replace(/^\d+\./,''); sel.appendChild(o); });
-
-    filtered = [...ALL];
-    renderDashboard();
-    renderList();
-    document.getElementById('loading').style.display = 'none';
-
-    // live clock on dashboard
-    setInterval(renderDashboard, 60000); // refresh summary every minute
-  } catch(e){
-    document.getElementById('loading').innerHTML = `<div style="text-align:center"><div style="font-size:32px">⚠️</div><p style="color:#B23A48">เชื่อมต่อ Firestore ไม่ได้<br><small>${e.message}</small></p></div>`;
-  }
-}
-
-// ── Tab switching ──────────────────────────────────────
-window.switchTab = function(tab){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
-  document.querySelector('.tab[data-tab="'+tab+'"]').classList.add('active');
-  document.getElementById('tab-'+tab).classList.add('active');
-};
-
-window.applyFilters = applyFilters;
-window.openDetail   = openDetail;
-window.closeDetail  = closeDetail;
-window.clearFilters = function(){
-  document.getElementById('fq').value='';
-  document.getElementById('fgrp').value='';
-  document.getElementById('fstat').value='';
-  applyFilters();
-};
-
-init();
-</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-:root{
-  --ink:#16243A;--paper:#F8F7F3;--card:#fff;--line:#E5E1D7;--line2:#D4CFC2;
-  --muted:#5C6675;--faint:#8A8F99;
-  --live:#2A7F62;--live-soft:#E8F2ED;
-  --alert:#B23A48;--alert-soft:#F7E9EA;
-  --warn:#9A6A00;--warn-soft:#FBF1D9;
-  --shadow:0 2px 4px rgba(22,36,58,.04),0 12px 40px rgba(22,36,58,.08);
+/* ── TOKENS ─────────────────────────────────────────── */
+:root {
+  --bg:       #F0F2F5;
+  --surface:  #FFFFFF;
+  --surface2: #F7F8FA;
+  --border:   #E4E7EC;
+  --border2:  #CDD2DA;
+  --ink:      #111827;
+  --ink2:     #374151;
+  --muted:    #6B7280;
+  --faint:    #9CA3AF;
+  --accent:   #2563EB;
+  --accent-s: #EFF6FF;
+  --green:    #059669;
+  --green-s:  #ECFDF5;
+  --red:      #DC2626;
+  --red-s:    #FEF2F2;
+  --amber:    #D97706;
+  --amber-s:  #FFFBEB;
+  --topbar:   #0F172A;
+  --topbar2:  #1E293B;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+  --shadow:    0 4px 16px rgba(0,0,0,.08), 0 1px 4px rgba(0,0,0,.05);
+  --shadow-lg: 0 20px 48px rgba(0,0,0,.14), 0 4px 12px rgba(0,0,0,.08);
+  --radius:    12px;
+  --radius-lg: 18px;
 }
+[data-theme="dark"] {
+  --bg:       #0D1117;
+  --surface:  #161B22;
+  --surface2: #1C2128;
+  --border:   #30363D;
+  --border2:  #444C56;
+  --ink:      #F0F6FC;
+  --ink2:     #CDD9E5;
+  --muted:    #8B949E;
+  --faint:    #6E7681;
+  --accent:   #58A6FF;
+  --accent-s: #1C2A3F;
+  --green:    #3FB950;
+  --green-s:  #122820;
+  --red:      #F85149;
+  --red-s:    #2D1116;
+  --amber:    #D29922;
+  --amber-s:  #271D0A;
+  --topbar:   #010409;
+  --topbar2:  #161B22;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.4);
+  --shadow:    0 4px 16px rgba(0,0,0,.4);
+  --shadow-lg: 0 20px 48px rgba(0,0,0,.6);
+}
+
+/* ── RESET ──────────────────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:"IBM Plex Sans Thai","Sarabun",system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:15px;line-height:1.55}
-.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+html{scroll-behavior:smooth}
+body{font-family:'Sarabun',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.6;min-height:100vh;transition:background .2s,color .2s}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
 
-/* ── Top bar ── */
-.topbar{background:var(--ink);color:#fff;padding:0 24px;display:flex;align-items:center;gap:0;height:56px;position:sticky;top:0;z-index:100}
-.topbar-brand{font-size:15px;font-weight:600;letter-spacing:-.01em;margin-right:32px;white-space:nowrap}
-.topbar-brand span{opacity:.5;font-weight:400}
-.tabs{display:flex;gap:2px;flex:1}
-.tab{padding:10px 18px;border:none;background:none;color:rgba(255,255,255,.55);font-size:14px;font-weight:500;cursor:pointer;border-radius:8px;transition:all .15s;font-family:inherit}
-.tab:hover{color:#fff;background:rgba(255,255,255,.08)}
-.tab.active{color:#fff;background:rgba(255,255,255,.14)}
-.topbar-clock{font-family:"IBM Plex Mono",monospace;font-size:12px;color:rgba(255,255,255,.4);margin-left:auto;white-space:nowrap}
+/* ── TOPBAR ─────────────────────────────────────────── */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:var(--topbar);
+  border-bottom:1px solid rgba(255,255,255,.06);
+  display:flex;align-items:center;gap:0;height:56px;padding:0 20px;
+  backdrop-filter:blur(12px);
+}
+.brand{display:flex;align-items:center;gap:10px;margin-right:28px;text-decoration:none}
+.brand-icon{width:30px;height:30px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex:none}
+.brand-name{font-size:15px;font-weight:700;color:#F8FAFC;letter-spacing:-.01em;white-space:nowrap}
+.brand-name span{color:var(--accent);font-weight:400}
 
-/* ── Layout ── */
-.main{max-width:1100px;margin:0 auto;padding:28px 20px 80px}
-.tab-content{display:none}.tab-content.active{display:block}
+.nav{display:flex;gap:2px;flex:1;overflow-x:auto}
+.nav::-webkit-scrollbar{display:none}
+.nav-btn{
+  display:flex;align-items:center;gap:7px;
+  padding:8px 14px;border:none;background:none;
+  color:rgba(248,250,252,.5);font-size:14px;font-weight:500;
+  cursor:pointer;border-radius:8px;white-space:nowrap;font-family:inherit;
+  transition:all .15s;
+}
+.nav-btn:hover{color:#F8FAFC;background:rgba(255,255,255,.07)}
+.nav-btn.active{color:#F8FAFC;background:rgba(255,255,255,.12)}
+.nav-btn svg{flex:none;opacity:.7}
+.nav-btn.active svg{opacity:1}
 
-/* ── KPI ── */
-.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:16px}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
-.kpi-k{font-size:12px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
-.kpi-v{font-size:22px;font-weight:600;line-height:1.1}
-.kpi-u{font-size:11px;color:var(--faint);margin-top:2px}
-.live-val{color:var(--live)}
-.active-kpi .kpi-v{color:var(--live)}
-.done-kpi .kpi-v{color:var(--alert)}
-.future-kpi .kpi-v{color:var(--warn)}
-.sec-title{font-size:14px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:24px 0 12px}
+.topbar-right{display:flex;align-items:center;gap:10px;margin-left:auto}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite;flex:none}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.top-clock{font-family:'IBM Plex Mono',monospace;font-size:12px;color:rgba(248,250,252,.35);white-space:nowrap}
 
-/* ── Tables ── */
-.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.theme-btn{
+  width:34px;height:34px;border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);border-radius:8px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+  transition:all .15s;flex:none;
+}
+.theme-btn:hover{background:rgba(255,255,255,.12)}
+
+/* ── LAYOUT ─────────────────────────────────────────── */
+.main{max-width:1200px;margin:0 auto;padding:24px 20px 80px}
+.tab-pane{display:none}.tab-pane.active{display:block}
+
+/* ── SECTION HEADER ─────────────────────────────────── */
+.sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.sec-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+
+/* ── KPI GRID ───────────────────────────────────────── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:12px}
+.kpi-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:20px;
+  box-shadow:var(--shadow-sm);transition:box-shadow .2s;
+}
+.kpi-card:hover{box-shadow:var(--shadow)}
+.kpi-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.kpi-val{font-size:26px;font-weight:700;line-height:1;color:var(--ink)}
+.kpi-val.green{color:var(--green)}
+.kpi-val.red{color:var(--red)}
+.kpi-val.amber{color:var(--amber)}
+.kpi-val.accent{color:var(--accent)}
+.kpi-sub{font-size:12px;color:var(--faint);margin-top:4px}
+
+/* ── GROUP TABLE ────────────────────────────────────── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);overflow:hidden;margin-bottom:16px}
+.card-hd{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .data-table{width:100%;border-collapse:collapse;font-size:14px}
-.data-table th{padding:11px 16px;text-align:left;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);background:#FAFAF7;border-bottom:1px solid var(--line)}
-.data-table td{padding:11px 16px;border-bottom:1px solid var(--line)}
-.data-table tr:last-child td{border-bottom:none}
-.data-table tbody tr:hover{background:#FAFAF7;cursor:pointer}
-.r{text-align:right}
-.mini-bar{display:inline-block;width:80px;height:6px;background:#EEEBE3;border-radius:3px;vertical-align:middle;margin-right:6px;overflow:hidden}
-.mini-fill{height:100%;background:var(--live);border-radius:3px}
-.pct-txt{font-size:12px;color:var(--muted)}
+.data-table thead{background:var(--surface2)}
+.data-table th{padding:11px 16px;text-align:left;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+.data-table th.r,.data-table td.r{text-align:right}
+.data-table td{padding:12px 16px;border-bottom:1px solid var(--border);color:var(--ink2)}
+.data-table tbody tr:last-child td{border-bottom:none}
+.data-table tbody tr{transition:background .12s;cursor:pointer}
+.data-table tbody tr:hover{background:var(--surface2)}
 
-/* ── Filter bar ── */
-.filter-bar{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-.filter-bar input,.filter-bar select{font-family:inherit;font-size:14px;color:var(--ink);background:#FAFAF7;border:1.5px solid var(--line);border-radius:9px;padding:8px 12px;outline:none;transition:border-color .15s}
-.filter-bar input{flex:1;min-width:180px}
-.filter-bar input:focus,.filter-bar select:focus{border-color:var(--ink);background:#fff}
-.filter-bar select{cursor:pointer}
-.clear-btn{border:none;background:none;font-size:13px;color:var(--faint);cursor:pointer;padding:8px 4px;font-family:inherit}
-.clear-btn:hover{color:var(--ink)}
-.list-count{font-size:13px;color:var(--muted);margin-bottom:10px;font-weight:500}
+/* mini bar */
+.mbar-wrap{display:flex;align-items:center;gap:8px}
+.mbar{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;min-width:60px}
+.mbar-fill{height:100%;border-radius:3px;background:var(--green);transition:width .6s cubic-bezier(.2,.7,.3,1)}
+.mbar-pct{font-size:12px;color:var(--muted);white-space:nowrap;min-width:36px;text-align:right}
 
-/* ── Status tags ── */
-.stag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;white-space:nowrap}
-.stag.active{background:var(--live-soft);color:var(--live)}
-.stag.done{background:var(--alert-soft);color:var(--alert)}
-.stag.future{background:var(--warn-soft);color:var(--warn)}
+/* ── FILTER BAR ─────────────────────────────────────── */
+.filter-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 18px;margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;box-shadow:var(--shadow-sm)}
+.search-wrap{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:0 12px;transition:border-color .15s}
+.search-wrap:focus-within{border-color:var(--accent);background:var(--surface)}
+.search-wrap svg{color:var(--faint);flex:none}
+.search-wrap input{flex:1;border:none;outline:none;background:none;font-family:inherit;font-size:14.5px;color:var(--ink);padding:9px 0}
+.search-wrap input::placeholder{color:var(--faint)}
+.filter-sel{font-family:inherit;font-size:14px;color:var(--ink);background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:9px 12px;outline:none;cursor:pointer;transition:border-color .15s}
+.filter-sel:focus{border-color:var(--accent)}
+.filter-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:10px;font-family:inherit;font-size:13.5px;font-weight:500;cursor:pointer;border:none;transition:all .15s;white-space:nowrap}
+.btn-ghost{background:var(--surface2);color:var(--muted);border:1.5px solid var(--border)}
+.btn-ghost:hover{color:var(--ink);border-color:var(--border2)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{filter:brightness(1.1)}
+.btn-amber{background:var(--amber);color:#fff}
+.btn-amber:hover{filter:brightness(1.1)}
+.list-count{font-size:13px;color:var(--muted);font-weight:500;margin-bottom:10px;padding:0 2px}
 
-/* ── Overlay & detail panel ── */
-#overlay{position:fixed;inset:0;background:rgba(22,36,58,.35);z-index:200;opacity:0;pointer-events:none;transition:opacity .25s}
+/* ── STATUS TAGS ────────────────────────────────────── */
+.stag{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.stag::before{content:'';width:5px;height:5px;border-radius:50%;flex:none}
+.stag.active{background:var(--green-s);color:var(--green)}.stag.active::before{background:var(--green)}
+.stag.done{background:var(--red-s);color:var(--red)}.stag.done::before{background:var(--red)}
+.stag.future{background:var(--amber-s);color:var(--amber)}.stag.future::before{background:var(--amber)}
+
+/* ── DETAIL PANEL ───────────────────────────────────── */
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;opacity:0;pointer-events:none;transition:opacity .25s;backdrop-filter:blur(2px)}
 #overlay.show{opacity:1;pointer-events:all}
-#detail-panel{position:fixed;top:0;right:0;width:min(520px,100vw);height:100vh;background:var(--card);z-index:201;transform:translateX(100%);transition:transform .3s cubic-bezier(.2,.7,.3,1);overflow-y:auto;box-shadow:-8px 0 40px rgba(22,36,58,.12)}
-#detail-panel.open{transform:none}
-.d-close{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;z-index:10}
-.d-close-btn{border:none;background:#F1EEE6;color:var(--ink);padding:7px 14px;border-radius:8px;font-family:inherit;font-size:13px;cursor:pointer;font-weight:500}
+#panel{
+  position:fixed;top:0;right:0;width:min(540px,100vw);height:100vh;
+  background:var(--surface);z-index:201;
+  transform:translateX(100%);transition:transform .3s cubic-bezier(.2,.7,.3,1);
+  overflow-y:auto;box-shadow:var(--shadow-lg);
+  display:flex;flex-direction:column;
+}
+#panel.open{transform:none}
+.panel-top{
+  position:sticky;top:0;background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:14px 20px;display:flex;justify-content:space-between;align-items:center;z-index:10;
+}
+.panel-top-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.close-btn{display:flex;align-items:center;gap:6px;padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;background:none;color:var(--ink2);font-family:inherit;font-size:13px;cursor:pointer;transition:all .15s}
+.close-btn:hover{background:var(--surface2)}
 
-/* ── Detail content ── */
-.d-head{padding:20px 22px 18px;border-bottom:1px solid var(--line)}
-.d-tags{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
-.dtag{font-size:12px;font-weight:500;padding:3px 10px;border-radius:16px;background:#F1EEE6;color:var(--muted)}
-.dtag.grp{background:var(--ink);color:#fff}
-.d-id{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.d-label{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:600}
-.d-num{font-size:30px;font-weight:600}
-.d-desc{font-size:17px;font-weight:500;margin-top:5px}
-.d-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
-.d-cell{background:#fff;padding:13px 22px}
-.dk{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:600;margin-bottom:2px}
-.dv{font-size:14.5px;font-weight:500}
-.d-fin{padding:20px 22px;background:linear-gradient(180deg,#fff,#FCFBF8);border-top:1px solid var(--line)}
-.d-fin-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px}
-.d-fin-title{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
-.live-badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:500;color:var(--live);background:var(--live-soft);padding:4px 10px;border-radius:16px;font-family:"IBM Plex Mono",monospace}
-.pulse{width:6px;height:6px;border-radius:50%;background:var(--live);animation:pulse 1.6s ease-in-out infinite;flex:none}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
-.d-money-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 20px;margin-bottom:16px}
-.dmoney .damt{font-size:18px;font-weight:500;margin-top:3px}
-.dunit{font-size:11px;color:var(--faint);font-weight:400}
-.d-book{border-top:1px dashed var(--line2);padding-top:14px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px}
-.d-book-val{font-size:34px;font-weight:700;color:var(--live);line-height:1}
-.d-book.done .d-book-val{color:var(--alert)}
-.gauge{margin-top:18px}
-.gauge-meta{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px}
-.bar{height:10px;background:#EEEBE3;border-radius:5px;overflow:hidden}
-.bar .fill{height:100%;background:linear-gradient(90deg,#3A9A78,var(--live));border-radius:5px;transition:width .8s cubic-bezier(.2,.7,.3,1)}
-.bar.done .fill{background:linear-gradient(90deg,#C85A66,var(--alert))}
-.gauge-foot{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin-top:5px}
-.d-edit{padding:20px 22px;border-top:1px solid var(--line);background:#fff}
-.d-edit-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
-.editable-pill{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--warn);background:var(--warn-soft);padding:3px 7px;border-radius:5px}
+/* panel sections */
+.p-hero{padding:22px 22px 18px;border-bottom:1px solid var(--border)}
+.p-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.p-tag{font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:16px;background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.p-tag.main{background:var(--topbar);color:#F8FAFC;border-color:transparent}
+.p-id-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.p-id-label{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);font-weight:700}
+.p-id-num{font-size:32px;font-weight:700;letter-spacing:.02em;color:var(--ink)}
+.p-desc{font-size:18px;font-weight:600;color:var(--ink);line-height:1.4}
+
+.p-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)}
+.p-cell{background:var(--surface);padding:13px 20px}
+.p-cell.full{grid-column:1/-1}
+.p-k{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:3px}
+.p-v{font-size:14.5px;font-weight:500;color:var(--ink2)}
+
+.p-fin{padding:20px 22px;border-top:1px solid var(--border);background:var(--surface2)}
+.p-fin-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.p-fin-title{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.live-badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--green);background:var(--green-s);padding:4px 10px;border-radius:20px;font-family:'IBM Plex Mono',monospace;font-weight:500}
+
+.p-money-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 20px;margin-bottom:16px}
+.p-money .pm-k{font-size:12px;color:var(--muted);margin-bottom:3px}
+.p-money .pm-v{font-size:17px;font-weight:600;color:var(--ink)}
+.pm-unit{font-size:11px;color:var(--faint);font-weight:400;margin-left:3px}
+
+.p-bookval{border-top:1px dashed var(--border2);padding-top:16px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px}
+.p-bookval-num{font-size:38px;font-weight:800;color:var(--green);line-height:1;letter-spacing:-.02em}
+.p-bookval-num.done{color:var(--red)}
+
+.p-gauge{margin-top:18px}
+.g-meta{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px}
+.g-bar{height:10px;background:var(--border);border-radius:5px;overflow:hidden}
+.g-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#059669,#10b981);transition:width 1s cubic-bezier(.2,.7,.3,1)}
+.g-fill.done{background:linear-gradient(90deg,#DC2626,#EF4444)}
+.g-foot{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin-top:5px}
+
+.p-edit{padding:20px 22px;border-top:1px solid var(--border);background:var(--surface)}
+.p-edit-hd{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.editable-pill{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);background:var(--amber-s);padding:3px 8px;border-radius:5px;border:1px solid var(--amber)}
+.edit-note{font-size:12.5px;color:var(--faint);margin-bottom:16px;line-height:1.5}
 .ef{margin-bottom:12px}
-.ef label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:5px}
-.ef input,.ef textarea{width:100%;font-family:inherit;font-size:14px;color:var(--ink);background:#FAFAF7;border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;outline:none;resize:vertical;transition:border-color .15s}
-.ef textarea{min-height:58px}
-.ef input:focus,.ef textarea:focus{border-color:var(--ink);background:#fff}
-.ef input::placeholder,.ef textarea::placeholder{color:#B4B8C0}
-.edit-actions{display:flex;align-items:center;gap:12px;margin-top:14px}
-.save-btn{border:none;cursor:pointer;background:var(--live);color:#fff;font-family:inherit;font-size:14px;font-weight:500;padding:9px 20px;border-radius:9px;transition:background .15s}
-.save-btn:hover{background:#236b53}
-.saved-msg{font-size:13px;color:var(--live);font-weight:500;opacity:0;transition:opacity .25s}
+.ef label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:5px}
+.ef input,.ef textarea{width:100%;font-family:inherit;font-size:14px;color:var(--ink);background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;padding:10px 13px;outline:none;resize:vertical;transition:border-color .15s,background .15s}
+.ef textarea{min-height:60px}
+.ef input:focus,.ef textarea:focus{border-color:var(--accent);background:var(--surface)}
+.ef input::placeholder,.ef textarea::placeholder{color:var(--faint)}
+.edit-row{display:flex;align-items:center;gap:12px;margin-top:14px}
+.save-btn{padding:10px 22px;border:none;background:var(--green);color:#fff;font-family:inherit;font-size:14px;font-weight:600;border-radius:9px;cursor:pointer;transition:filter .15s}
+.save-btn:hover{filter:brightness(1.1)}
+.saved-msg{font-size:13px;color:var(--green);font-weight:600;opacity:0;transition:opacity .25s;display:flex;align-items:center;gap:5px}
 .saved-msg.show{opacity:1}
 
-/* ── Loading ── */
-#loading{position:fixed;inset:0;background:var(--paper);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px}
-.spinner{width:36px;height:36px;border:3px solid var(--line);border-top-color:var(--ink);border-radius:50%;animation:spin .7s linear infinite}
+/* ── LOADING ────────────────────────────────────────── */
+#loading{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;color:var(--muted)}
 
-@media(max-width:600px){
-  .topbar{padding:0 14px}
-  .tab{padding:10px 12px;font-size:13px}
-  .main{padding:16px 12px 60px}
-  .d-money-grid{grid-template-columns:1fr}
-  .d-grid{grid-template-columns:1fr}
+/* ── TOAST ──────────────────────────────────────────── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--topbar);color:#F8FAFC;padding:11px 22px;border-radius:10px;font-size:14px;font-weight:500;opacity:0;transition:all .25s;z-index:999;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── MOBILE ─────────────────────────────────────────── */
+@media(max-width:640px){
+  .topbar{padding:0 12px;height:52px}
+  .brand-name{display:none}
+  .top-clock{display:none}
+  .main{padding:16px 12px 70px}
+  .kpi-grid{grid-template-columns:1fr 1fr;gap:8px}
+  .kpi-card{padding:14px}
+  .kpi-val{font-size:20px}
+  .filter-bar{padding:12px 14px;gap:8px}
+  .search-wrap{min-width:100%}
+  .data-table th,.data-table td{padding:10px 12px;font-size:13px}
+  .p-money-grid{grid-template-columns:1fr}
+  .p-grid{grid-template-columns:1fr}
+  .filter-actions{width:100%}
+  .filter-actions .btn{flex:1;justify-content:center}
+}
+@media(max-width:400px){
+  .kpi-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
 <body>
 
-<div id="loading">
-  <div class="spinner"></div>
-  <div style="color:var(--muted);font-size:14px">กำลังโหลดข้อมูลจาก Firebase...</div>
-</div>
+<div id="loading"><div class="spinner"></div><div class="loading-txt">กำลังโหลดข้อมูล...</div></div>
+<div id="overlay" onclick="closePanel()"></div>
+<div id="toast" class="toast"></div>
 
-<div id="overlay" onclick="closeDetail()"></div>
-
-<!-- Detail Panel -->
-<div id="detail-panel">
-  <div class="d-close">
-    <span style="font-size:14px;font-weight:600;color:var(--muted)">รายละเอียดทรัพย์สิน</span>
-    <button class="d-close-btn" onclick="closeDetail()">✕ ปิด</button>
+<!-- DETAIL PANEL -->
+<div id="panel">
+  <div class="panel-top">
+    <span class="panel-top-title">รายละเอียดทรัพย์สิน</span>
+    <button class="close-btn" onclick="closePanel()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      ปิด
+    </button>
   </div>
-  <div id="detail-inner"></div>
+  <div id="panel-body"></div>
 </div>
 
-<!-- Top Bar -->
+<!-- TOPBAR -->
 <div class="topbar">
-  <div class="topbar-brand">Smart Asset <span>Tracker</span></div>
-  <div class="tabs">
-    <button class="tab active" data-tab="dash" onclick="switchTab('dash')">📊 ภาพรวม</button>
-    <button class="tab" data-tab="list" onclick="switchTab('list')">📋 รายการทรัพย์สิน</button>
+  <a class="brand" href="#">
+    <div class="brand-icon">📦</div>
+    <div class="brand-name">Smart Asset <span>Tracker</span></div>
+  </a>
+  <nav class="nav">
+    <button class="nav-btn active" data-tab="dash" onclick="switchTab('dash',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      ภาพรวม
+    </button>
+    <button class="nav-btn" data-tab="list" onclick="switchTab('list',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+      รายการทรัพย์สิน
+    </button>
+  </nav>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <div class="top-clock mono" id="top-clock"></div>
+    <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="เปลี่ยนธีม">🌙</button>
   </div>
-  <div class="topbar-clock" id="top-clock"></div>
 </div>
 
-<!-- Main -->
+<!-- MAIN -->
 <div class="main">
-  <!-- Dashboard Tab -->
-  <div class="tab-content active" id="tab-dash">
-    <div id="dash"></div>
+  <!-- DASHBOARD -->
+  <div class="tab-pane active" id="tab-dash">
+    <div id="dash-content"></div>
   </div>
-
-  <!-- List Tab -->
-  <div class="tab-content" id="tab-list">
+  <!-- LIST -->
+  <div class="tab-pane" id="tab-list">
     <div class="filter-bar">
-      <input id="fq" placeholder="🔍  ค้นหาเลข Asset หรือชื่อ..." oninput="applyFilters()">
-      <select id="fgrp" onchange="applyFilters()"><option value="">— ทุกกลุ่ม —</option></select>
-      <select id="fstat" onchange="applyFilters()">
+      <div class="search-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="fq" placeholder="ค้นหาเลข Asset หรือชื่อ..." oninput="applyFilters()">
+      </div>
+      <select class="filter-sel" id="fgrp" onchange="applyFilters()"><option value="">— ทุกกลุ่ม —</option></select>
+      <select class="filter-sel" id="fstat" onchange="applyFilters()">
         <option value="">— ทุกสถานะ —</option>
         <option value="active">กำลังตัดค่าเสื่อม</option>
-        <option value="done">หมดอายุทางบัญชีแล้ว</option>
+        <option value="done">หมดอายุทางบัญชี</option>
         <option value="future">ยังไม่เริ่มตัด</option>
       </select>
-      <button class="clear-btn" onclick="clearFilters()">ล้างตัวกรอง</button>
+      <div class="filter-actions">
+        <button class="btn btn-ghost" onclick="clearFilters()">ล้าง</button>
+        <button class="btn btn-green" onclick="exportExcel()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Excel
+        </button>
+        <button class="btn btn-amber" onclick="exportCSV()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          CSV
+        </button>
+      </div>
     </div>
-    <div class="list-count" id="list-count">—</div>
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>เลข Asset</th>
-            <th>ชื่อทรัพย์สิน</th>
-            <th>กลุ่ม</th>
-            <th class="r">มูลค่าคงเหลือ (บาท)</th>
-            <th>วันที่ได้มา</th>
-            <th>สถานะ</th>
-          </tr>
-        </thead>
-        <tbody id="list-body"></tbody>
-      </table>
+    <div class="list-count" id="list-count"></div>
+    <div class="card">
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>เลข Asset</th>
+              <th>ชื่อทรัพย์สิน</th>
+              <th class="hide-sm">กลุ่ม</th>
+              <th class="r">มูลค่าคงเหลือ</th>
+              <th class="hide-sm">วันที่ได้มา</th>
+              <th>สถานะ</th>
+            </tr>
+          </thead>
+          <tbody id="list-body"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-// top clock (non-module)
-setInterval(()=>{
-  const el=document.getElementById('top-clock');
-  if(el) el.textContent=new Date().toLocaleString('th-TH',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+// ── Firebase ──────────────────────────────────────────
+firebase.initializeApp({
+  apiKey:"AIzaSyBN8m0MjvGesvWiYZ1IV6kB4CxKBbapxu4",
+  authDomain:"smart-asset-tracker-95fa0.firebaseapp.com",
+  projectId:"smart-asset-tracker-95fa0",
+  storageBucket:"smart-asset-tracker-95fa0.firebasestorage.app",
+  messagingSenderId:"769509063848",
+  appId:"1:769509063848:web:d5edaad2d7b09927d2169d"
+});
+var db = firebase.firestore();
+
+// ── State ─────────────────────────────────────────────
+var ALL=[], filtered=[], metaCache={}, currentAsset=null, liveTimer=null;
+
+// ── Theme ─────────────────────────────────────────────
+var isDark = localStorage.getItem('theme') === 'dark';
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  document.getElementById('theme-btn').textContent = isDark ? '☀️' : '🌙';
+}
+function toggleTheme(){ isDark=!isDark; localStorage.setItem('theme',isDark?'dark':'light'); applyTheme(); }
+applyTheme();
+
+// ── Depreciation ──────────────────────────────────────
+var DAY=86400000;
+function daysInMonth(d){ return new Date(d.getFullYear(),d.getMonth()+1,0).getDate(); }
+function calc(a,now){
+  var base=a.acq-a.scrap, cap=new Date(a.cap+'T00:00:00'), totalDays=a.life*365;
+  var days=Math.floor((now-cap)/DAY), future=days<0;
+  if(days<0)days=0;
+  if(base<=0) return {acq:a.acq,accu:a.acq-a.scrap,book:a.scrap,pct:100,monthly:0,annual:0,done:true,future:future,cap:cap,totalDays:totalDays,daysUsed:days};
+  var daily=base/totalDays, accu=daily*days, done=false;
+  if(accu>=base){accu=base;done=true;}
+  return {acq:a.acq,accu:accu,book:a.acq-accu,pct:Math.min(100,days/totalDays*100),monthly:done?0:daily*daysInMonth(now),annual:done?0:daily*365,done:done,future:future,cap:cap,totalDays:totalDays,daysUsed:days,daily:daily};
+}
+
+// ── Formatters ────────────────────────────────────────
+function fmt(n){ return (+n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmt0(n){ return (+n).toLocaleString('en-US',{maximumFractionDigits:0}); }
+function fmtDate(d){ return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+function esc(s){ return String(s||'').replace(/[&<>"]/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
+function clock(d){ return d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+
+// ── Dashboard ─────────────────────────────────────────
+function renderDash(){
+  var now=new Date(), tAcq=0,tBook=0,tDep=0,nActive=0,nDone=0,nFuture=0, grpMap={};
+  ALL.forEach(function(a){
+    var c=calc(a,now);
+    tAcq+=c.acq; tBook+=c.book; tDep+=c.accu;
+    if(c.done)nDone++; else if(c.future)nFuture++; else nActive++;
+    var g=a.grp.replace(/^\d+\./,'');
+    if(!grpMap[g])grpMap[g]={acq:0,book:0,count:0};
+    grpMap[g].acq+=c.acq; grpMap[g].book+=c.book; grpMap[g].count++;
+  });
+  var grpRows=Object.entries(grpMap).sort(function(a,b){return b[1].acq-a[1].acq;}).map(function(e){
+    var g=e[0],v=e[1];
+    var pct=v.acq>0?(v.book/v.acq*100):0;
+    var barColor=pct>20?'var(--green)':pct>5?'var(--amber)':'var(--red)';
+    return '<tr><td>'+esc(g)+'</td>'
+      +'<td class="r mono">'+fmt0(v.count)+'</td>'
+      +'<td class="r mono">'+fmt(v.acq)+'</td>'
+      +'<td class="r mono">'+fmt(v.book)+'</td>'
+      +'<td><div class="mbar-wrap"><div class="mbar"><div class="mbar-fill" style="width:'+pct+'%;background:'+barColor+'"></div></div><span class="mbar-pct">'+pct.toFixed(1)+'%</span></div></td>'
+      +'</tr>';
+  }).join('');
+  document.getElementById('dash-content').innerHTML=
+    '<div class="kpi-grid">'
+    +'<div class="kpi-card"><div class="kpi-label">ทรัพย์สินทั้งหมด</div><div class="kpi-val accent mono">'+fmt0(ALL.length)+'</div><div class="kpi-sub">รายการ</div></div>'
+    +'<div class="kpi-card"><div class="kpi-label">มูลค่าซื้อรวม</div><div class="kpi-val mono">'+fmt(tAcq)+'</div><div class="kpi-sub">บาท</div></div>'
+    +'<div class="kpi-card"><div class="kpi-label">มูลค่าคงเหลือ (สด)</div><div class="kpi-val green mono">'+fmt(tBook)+'</div><div class="kpi-sub">บาท · คำนวณ ณ ปัจจุบัน</div></div>'
+    +'<div class="kpi-card"><div class="kpi-label">ค่าเสื่อมสะสมรวม</div><div class="kpi-val mono">'+fmt(tDep)+'</div><div class="kpi-sub">บาท</div></div>'
+    +'</div>'
+    +'<div class="kpi-grid">'
+    +'<div class="kpi-card"><div class="kpi-label">กำลังตัดค่าเสื่อม</div><div class="kpi-val green mono">'+nActive+'</div></div>'
+    +'<div class="kpi-card"><div class="kpi-label">หมดอายุทางบัญชี</div><div class="kpi-val red mono">'+nDone+'</div></div>'
+    +'<div class="kpi-card"><div class="kpi-label">ยังไม่เริ่มตัด</div><div class="kpi-val amber mono">'+nFuture+'</div></div>'
+    +'</div>'
+    +'<div class="sec-hd"><span class="sec-title">มูลค่าแยกตามกลุ่มทรัพย์สิน</span></div>'
+    +'<div class="card"><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>กลุ่มทรัพย์สิน</th><th class="r">จำนวน</th><th class="r">ต้นทุนรวม (บาท)</th><th class="r">คงเหลือ (บาท)</th><th>% คงเหลือ</th></tr></thead><tbody>'+grpRows+'</tbody></table></div></div>';
+}
+
+// ── List & filters ────────────────────────────────────
+function applyFilters(){
+  var q=document.getElementById('fq').value.trim().toLowerCase();
+  var grp=document.getElementById('fgrp').value;
+  var stat=document.getElementById('fstat').value;
+  var now=new Date();
+  filtered=ALL.filter(function(a){
+    if(q&&!a.asset.includes(q)&&!a.desc.toLowerCase().includes(q))return false;
+    if(grp&&a.grp!==grp)return false;
+    if(stat){var c=calc(a,now);if(stat==='active'&&(c.done||c.future))return false;if(stat==='done'&&!c.done)return false;if(stat==='future'&&!c.future)return false;}
+    return true;
+  });
+  renderList();
+}
+function renderList(){
+  var now=new Date(),tbody=document.getElementById('list-body');
+  document.getElementById('list-count').textContent=filtered.length.toLocaleString()+' รายการ';
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--faint)">ไม่พบรายการที่ตรงกัน</td></tr>';return;}
+  tbody.innerHTML=filtered.slice(0,300).map(function(a){
+    var c=calc(a,now);
+    var tag=c.done?'<span class="stag done">หมดอายุ</span>':c.future?'<span class="stag future">ยังไม่เริ่ม</span>':'<span class="stag active">กำลังตัด</span>';
+    return '<tr onclick="openPanel(\''+esc(a.asset)+'\')">'
+      +'<td class="mono" style="font-weight:600;color:var(--accent)">'+esc(a.asset)+'</td>'
+      +'<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(a.desc)+'</td>'
+      +'<td class="hide-sm" style="font-size:13px;color:var(--muted)">'+esc(a.grp.replace(/^\d+\./,''))+'</td>'
+      +'<td class="r mono" style="font-weight:600">'+fmt(c.book)+'</td>'
+      +'<td class="hide-sm mono" style="font-size:13px;color:var(--muted)">'+fmtDate(new Date(a.cap+'T00:00:00'))+'</td>'
+      +'<td>'+tag+'</td>'
+      +'</tr>';
+  }).join('');
+  if(filtered.length>300) tbody.innerHTML+='<tr><td colspan="6" style="text-align:center;padding:14px;color:var(--faint);font-size:13px">แสดง 300 รายการแรก — กรองเพิ่มเพื่อดูทั้งหมด</td></tr>';
+}
+function clearFilters(){document.getElementById('fq').value='';document.getElementById('fgrp').value='';document.getElementById('fstat').value='';applyFilters();}
+
+// ── Panel ─────────────────────────────────────────────
+async function openPanel(assetId){
+  var a=ALL.find(function(x){return x.asset===assetId;});
+  if(!a)return;
+  currentAsset=a;
+  var meta=metaCache[assetId]||{loc:'',note:''};
+  try{var snap=await db.collection('asset_meta').doc(assetId).get();if(snap.exists){meta=snap.data();metaCache[assetId]=meta;}}catch(e){}
+  renderPanel(a,meta);
+  document.getElementById('panel').classList.add('open');
+  document.getElementById('overlay').classList.add('show');
+  document.body.style.overflow='hidden';
+  if(liveTimer)clearInterval(liveTimer);
+  liveTimer=setInterval(function(){tickPanel(a);},1000);
+}
+function renderPanel(a,meta){
+  var now=new Date(),c=calc(a,now);
+  var capDate=new Date(a.cap+'T00:00:00');
+  var endDate=new Date(capDate.getTime()+c.totalDays*DAY);
+  var statusTag=c.done?'<span class="stag done">หมดอายุทางบัญชีแล้ว</span>':c.future?'<span class="stag future">ยังไม่เริ่มตัดค่าเสื่อม</span>':'<span class="stag active">กำลังตัดค่าเสื่อม</span>';
+  document.getElementById('panel-body').innerHTML=
+    '<div class="p-hero">'
+    +'<div class="p-tags"><span class="p-tag main">'+esc(a.grp.replace(/^\d+\./,''))+'</span><span class="p-tag">'+esc(a.cca)+'</span></div>'
+    +'<div class="p-id-row"><span class="p-id-label">Asset</span><span class="p-id-num mono">'+esc(a.asset)+'</span></div>'
+    +'<div class="p-desc">'+esc(a.desc)+'</div>'
+    +'</div>'
+    +'<div class="p-grid">'
+    +'<div class="p-cell"><div class="p-k">บริษัท</div><div class="p-v">'+esc(a.company)+'</div></div>'
+    +'<div class="p-cell"><div class="p-k">หน่วยงาน</div><div class="p-v">'+esc(a.mis)+'</div></div>'
+    +'<div class="p-cell"><div class="p-k">วันที่ได้มา</div><div class="p-v mono">'+fmtDate(capDate)+'</div></div>'
+    +'<div class="p-cell"><div class="p-k">อายุการใช้งาน</div><div class="p-v mono">'+a.life+' ปี</div></div>'
+    +'<div class="p-cell"><div class="p-k">มูลค่าซาก</div><div class="p-v mono">'+fmt(a.scrap)+' บาท</div></div>'
+    +'<div class="p-cell"><div class="p-k">ผ่านมาแล้ว</div><div class="p-v mono">'+fmt0(c.daysUsed)+' วัน</div></div>'
+    +'</div>'
+    +'<div class="p-fin">'
+    +'<div class="p-fin-hd"><span class="p-fin-title">มูลค่าและค่าเสื่อมราคา</span><span class="live-badge"><span class="live-dot"></span>สด · <span id="pclock">'+clock(now)+'</span></span></div>'
+    +'<div class="p-money-grid">'
+    +'<div class="p-money"><div class="pm-k">มูลค่าซื้อ</div><div class="pm-v mono">'+fmt(c.acq)+'<span class="pm-unit">บาท</span></div></div>'
+    +'<div class="p-money"><div class="pm-k">ค่าเสื่อมสะสม</div><div class="pm-v mono" id="p-accu">'+fmt(c.accu)+'<span class="pm-unit">บาท</span></div></div>'
+    +'<div class="p-money"><div class="pm-k">ค่าเสื่อม/เดือนนี้</div><div class="pm-v mono">'+fmt(c.monthly)+'<span class="pm-unit">บาท</span></div></div>'
+    +'<div class="p-money"><div class="pm-k">ค่าเสื่อม/ปี</div><div class="pm-v mono">'+fmt(c.annual)+'<span class="pm-unit">บาท</span></div></div>'
+    +'</div>'
+    +'<div class="p-bookval">'
+    +'<div><div class="pm-k">มูลค่าตามบัญชีปัจจุบัน</div><div class="p-bookval-num mono '+(c.done?'done':'')+'" id="p-book">'+fmt(c.book)+'<span class="pm-unit"> บาท</span></div></div>'
+    +statusTag
+    +'</div>'
+    +'<div class="p-gauge">'
+    +'<div class="g-meta"><span>อายุที่ใช้ไป</span><span class="mono" id="p-pct">'+c.pct.toFixed(1)+'%</span></div>'
+    +'<div class="g-bar"><div class="g-fill '+(c.done?'done':'')+'" id="p-bar" style="width:'+c.pct+'%"></div></div>'
+    +'<div class="g-foot"><span>'+fmtDate(capDate)+'</span><span>'+(c.done?'ครบอายุแล้ว':'เหลือ '+fmt0(Math.max(0,(c.totalDays-c.daysUsed)/365))+' ปี')+'</span><span>'+fmtDate(endDate)+'</span></div>'
+    +'</div>'
+    +'</div>'
+    +'<div class="p-edit">'
+    +'<div class="p-edit-hd"><span class="p-fin-title">ข้อมูลภาคสนาม</span><span class="editable-pill">แก้ไขได้ · บันทึกส่วนกลาง</span></div>'
+    +'<div class="edit-note">กรอกข้อมูลแล้วกดบันทึก — ทุกคนที่เปิดระบบนี้จะเห็นพร้อมกัน</div>'
+    +'<div class="ef"><label>สถานที่เก็บทรัพย์สิน</label><input id="d-loc" placeholder="เช่น อาคารซ่อมบำรุง ชั้น 1 โซน B" value="'+esc(meta.loc||'')+'"></div>'
+    +'<div class="ef"><label>หมายเหตุ</label><textarea id="d-note" placeholder="เช่น ย้ายมาจากโรงเรือน 3 เมื่อ มี.ค. 2026">'+esc(meta.note||'')+'</textarea></div>'
+    +'<div class="edit-row"><button class="save-btn" onclick="saveMeta(\''+esc(a.asset)+'\')">บันทึก</button><span class="saved-msg" id="d-saved">✓ บันทึกแล้ว</span></div>'
+    +'</div>';
+}
+function tickPanel(a){
+  var now=new Date(),c=calc(a,now);
+  var el=function(id){return document.getElementById(id);};
+  if(el('pclock'))el('pclock').textContent=clock(now);
+  if(el('p-book'))el('p-book').innerHTML=fmt(c.book)+'<span class="pm-unit"> บาท</span>';
+  if(el('p-accu'))el('p-accu').innerHTML=fmt(c.accu)+'<span class="pm-unit">บาท</span>';
+  if(el('p-pct'))el('p-pct').textContent=c.pct.toFixed(1)+'%';
+  if(el('p-bar'))el('p-bar').style.width=c.pct+'%';
+}
+function closePanel(){
+  document.getElementById('panel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+  document.body.style.overflow='';
+  if(liveTimer){clearInterval(liveTimer);liveTimer=null;}
+  currentAsset=null;
+}
+async function saveMeta(assetId){
+  var loc=document.getElementById('d-loc').value;
+  var note=document.getElementById('d-note').value;
+  try{
+    await db.collection('asset_meta').doc(assetId).set({loc:loc,note:note,updatedAt:new Date().toISOString()});
+    metaCache[assetId]={loc:loc,note:note};
+    document.getElementById('d-saved').classList.add('show');
+    setTimeout(function(){var el=document.getElementById('d-saved');if(el)el.classList.remove('show');},2500);
+    showToast('✓ บันทึกสำเร็จ — ทุกคนเห็นข้อมูลนี้แล้ว');
+  }catch(e){showToast('❌ บันทึกไม่สำเร็จ: '+e.message);}
+}
+
+// ── Export ────────────────────────────────────────────
+function getExportData(){
+  var now=new Date();
+  return filtered.map(function(a){
+    var c=calc(a,now);
+    return {
+      'เลข Asset':a.asset,'ชื่อทรัพย์สิน':a.desc,'กลุ่ม':a.grp.replace(/^\d+\./,''),
+      'หน่วยงาน':a.cca,'บริษัท':a.company,
+      'วันที่ได้มา':fmtDate(new Date(a.cap+'T00:00:00')),'อายุการใช้งาน (ปี)':a.life,
+      'มูลค่าซื้อ':a.acq,'ค่าเสื่อมสะสม':+c.accu.toFixed(2),'มูลค่าคงเหลือ':+c.book.toFixed(2),
+      'ค่าเสื่อม/เดือน':+c.monthly.toFixed(2),'ค่าเสื่อม/ปี':+c.annual.toFixed(2),
+      'สถานะ':c.done?'หมดอายุ':c.future?'ยังไม่เริ่ม':'กำลังตัด',
+      'สถานที่เก็บ':(metaCache[a.asset]||{}).loc||'','หมายเหตุ':(metaCache[a.asset]||{}).note||''
+    };
+  });
+}
+function exportExcel(){
+  if(!filtered.length){showToast('ไม่มีข้อมูลที่จะ export');return;}
+  var rows=getExportData();
+  var ws=XLSX.utils.json_to_sheet(rows);
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Assets');
+  XLSX.writeFile(wb,'smart-asset-tracker-'+new Date().toISOString().slice(0,10)+'.xlsx');
+  showToast('✓ Export Excel สำเร็จ ('+filtered.length+' รายการ)');
+}
+function exportCSV(){
+  if(!filtered.length){showToast('ไม่มีข้อมูลที่จะ export');return;}
+  var rows=getExportData();
+  var keys=Object.keys(rows[0]);
+  var csv='\uFEFF'+keys.join(',')+'\n'+rows.map(function(r){return keys.map(function(k){var v=String(r[k]||'');return v.includes(',')||v.includes('"')?'"'+v.replace(/"/g,'""')+'"':v;}).join(',');}).join('\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='smart-asset-tracker-'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  showToast('✓ Export CSV สำเร็จ ('+filtered.length+' รายการ)');
+}
+
+// ── Toast ─────────────────────────────────────────────
+function showToast(msg){
+  var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},3000);
+}
+
+// ── Tab ───────────────────────────────────────────────
+function switchTab(tab,btn){
+  document.querySelectorAll('.tab-pane').forEach(function(el){el.classList.remove('active');});
+  document.querySelectorAll('.nav-btn').forEach(function(el){el.classList.remove('active');});
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(btn)btn.classList.add('active');
+}
+
+// ── Clock ─────────────────────────────────────────────
+setInterval(function(){
+  var el=document.getElementById('top-clock');
+  if(el)el.textContent=new Date().toLocaleString('th-TH',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
 },1000);
+
+// ── Init ──────────────────────────────────────────────
+async function init(){
+  try{
+    var snap=await db.collection('assets').get();
+    ALL=[];
+    snap.forEach(function(d){ALL.push(d.data());});
+    ALL.sort(function(a,b){return +a.asset-+b.asset;});
+    var grps=[...new Set(ALL.map(function(a){return a.grp;}))].sort();
+    var sel=document.getElementById('fgrp');
+    grps.forEach(function(g){var o=document.createElement('option');o.value=g;o.textContent=g.replace(/^\d+\./,'');sel.appendChild(o);});
+    filtered=[...ALL];
+    renderDash();
+    renderList();
+    document.getElementById('loading').style.display='none';
+  }catch(e){
+    document.getElementById('loading').innerHTML='<div style="text-align:center"><div style="font-size:40px;margin-bottom:12px">⚠️</div><div style="color:var(--red);font-size:15px">เชื่อมต่อ Firestore ไม่ได้<br><small style=\'color:var(--muted)\'>'+e.message+'</small></div></div>';
+  }
+}
+init();
 </script>
 </body>
 </html>
