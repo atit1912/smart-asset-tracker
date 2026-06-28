@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Smart Asset Tracker 1.0</title>
+<title>Smart Asset Tracker</title>
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -726,7 +726,8 @@ input, textarea, select { font-family: var(--font-thai); }
 
 /* ── LOADING ──────────────────────────────────────────── */
 #loading {
-  display: flex; flex-direction: column;
+  position: fixed; inset: 0; background: var(--bg);
+  z-index: 999; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: var(--sp-4);
 }
 .spinner {
@@ -1346,7 +1347,7 @@ input, textarea, select { font-family: var(--font-thai); }
 
 /* QR Modal */
 .qr-modal {
-  position: fixed; inset: 0; z-index: 500;
+  position: fixed; inset: 0; z-index: 9999;
   background: rgba(0,0,0,.7); display: none;
   align-items: center; justify-content: center;
   padding: 20px;
@@ -1470,13 +1471,13 @@ input, textarea, select { font-family: var(--font-thai); }
   width: 220px; flex-shrink: 0;
   background: #0F172A !important;
   display: flex; flex-direction: column;
-  border-right: 1px solid rgba(255,255,255,.08) !important;
+  border-right: 1px solid rgba(255,255,255,.1) !important;
   position: fixed; left: 0; top: 0; bottom: 0; z-index: 50;
   transition: transform .25s;
 }
 .sidebar-brand {
   display: flex; align-items: center; gap: 10px;
-  padding: 20px 16px 16px; border-bottom: 1px solid rgba(255,255,255,.1) !important;
+  padding: 20px 16px 16px; border-bottom: 1px solid rgba(255,255,255,.06);
 }
 .sidebar-brand-mark {
   width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
@@ -1494,22 +1495,22 @@ input, textarea, select { font-family: var(--font-thai); }
 
 .nav-section-label {
   font-size: 9.5px; font-weight: 700; letter-spacing: .1em;
-  text-transform: uppercase; color: rgba(255,255,255,.35) !important;
+  text-transform: uppercase; color: rgba(255,255,255,.25);
   padding: 12px 10px 6px; margin-top: 4px;
 }
 .sidebar-item {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 10px; border-radius: 8px;
-  color: rgba(255,255,255,.55) !important; font-size: 13px; font-weight: 500;
+  color: rgba(255,255,255,.45); font-size: 13px; font-weight: 500;
   cursor: pointer; border: none; background: none;
   width: 100%; text-align: left; font-family: var(--font-thai);
   transition: background .12s, color .12s;
   margin-bottom: 2px;
 }
-.sidebar-item:hover { background: rgba(255,255,255,.08) !important; color: rgba(255,255,255,.85) !important; }
-.sidebar-item.active { background: rgba(59,130,246,.25) !important; color: #93C5FD !important; }
-.sidebar-item.active svg { color: #93C5FD !important; }
-.sidebar-item svg { width: 16px; height: 16px; flex-shrink: 0; color: rgba(255,255,255,.35) !important; }
+.sidebar-item:hover { background: rgba(255,255,255,.07); color: rgba(255,255,255,.8); }
+.sidebar-item.active { background: rgba(59,130,246,.2); color: #60A5FA; }
+.sidebar-item.active svg { color: #60A5FA; }
+.sidebar-item svg { width: 16px; height: 16px; flex-shrink: 0; color: rgba(255,255,255,.3); }
 .sidebar-item .badge-count {
   margin-left: auto; background: var(--danger-500); color: #fff;
   font-size: 10px; font-weight: 700; padding: 2px 6px;
@@ -1518,7 +1519,7 @@ input, textarea, select { font-family: var(--font-thai); }
 
 .sidebar-footer {
   padding: 12px 8px 16px;
-  border-top: 1px solid rgba(255,255,255,.1) !important;
+  border-top: 1px solid rgba(255,255,255,.06);
 }
 .sidebar-user {
   display: flex; align-items: center; gap: 10px;
@@ -1531,8 +1532,8 @@ input, textarea, select { font-family: var(--font-thai); }
   font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
 }
 .sidebar-user-info { line-height: 1.3; }
-.sidebar-user-name { font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,.8) !important; }
-.sidebar-user-role { font-size: 10.5px; color: rgba(255,255,255,.4) !important; }
+.sidebar-user-name { font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,.7); }
+.sidebar-user-role { font-size: 10.5px; color: rgba(255,255,255,.3); }
 
 /* Sidebar toggle for mobile */
 .sidebar-toggle {
@@ -1564,7 +1565,7 @@ input, textarea, select { font-family: var(--font-thai); }
 .main-topbar-title {
   font-size: 14px; font-weight: 700; color: var(--ink); flex: 1;
 }
-.main-content { flex: 1; overflow-y: auto; padding: 24px 24px 80px; background: var(--bg); }
+.main-content { flex: 1; overflow-y: auto; padding: 24px 24px 80px; }
 
 /* ── Dashboard grid ───────────────────────────────── */
 .dash-grid {
@@ -1802,232 +1803,6 @@ input, textarea, select { font-family: var(--font-thai); }
 .logout-actions { display: flex; gap: 10px; }
 .logout-actions .btn { flex: 1; justify-content: center; }
 
-
-
-[data-theme="light"] .live-pill {
-  background: rgba(5,150,105,.1); border-color: rgba(5,150,105,.25); color: #059669;
-}
-[data-theme="light"] .live-dot { background: #059669; }
-[data-theme="light"] .user-chip {
-  background: rgba(0,0,0,.06); border-color: rgba(0,0,0,.1);
-}
-[data-theme="light"] .user-chip-name { color: #374151; }
-
-/* ── LIGHT MODE SPECIFIC FIXES ─────────────────────────── */
-/* Sidebar always dark - override any theme changes */
-.sidebar { background: #0F172A !important; }
-
-/* Main topbar in light mode */
-[data-theme="light"] .main-topbar {
-  background: #FFFFFF;
-  border-bottom: 1px solid #E5E7EB;
-  box-shadow: 0 1px 3px rgba(0,0,0,.06);
-}
-[data-theme="light"] .main-topbar-title { color: #111827; }
-[data-theme="light"] .top-clock { color: #9CA3AF; }
-[data-theme="light"] .icon-btn {
-  background: #F3F4F6; border-color: #E5E7EB; color: #374151;
-}
-
-/* KPI cards light mode */
-[data-theme="light"] .kpi-card {
-  background: #FFFFFF;
-  border-color: #E5E7EB;
-}
-[data-theme="light"] .kpi-label { color: #6B7280; }
-[data-theme="light"] .kpi-foot  { color: #9CA3AF; }
-[data-theme="light"] .kpi-value { color: #111827; }
-[data-theme="light"] .kpi-value.primary { color: #2563EB; }
-[data-theme="light"] .kpi-value.success { color: #059669; }
-[data-theme="light"] .kpi-value.danger  { color: #DC2626; }
-
-/* Donut card light mode */
-[data-theme="light"] .donut-card {
-  background: #FFFFFF;
-  border-color: #E5E7EB;
-}
-[data-theme="light"] .donut-title  { color: #111827; }
-[data-theme="light"] .donut-sub    { color: #6B7280; }
-[data-theme="light"] .donut-center-val   { color: #111827; }
-[data-theme="light"] .donut-center-label { color: #6B7280; }
-[data-theme="light"] .donut-legend-name  { color: #374151; }
-[data-theme="light"] .donut-legend-val   { color: #4B5563; }
-[data-theme="light"] .donut-legend-pct   { color: #9CA3AF; }
-
-/* Alert card light mode */
-[data-theme="light"] .alert-card {
-  background: #FFFFFF;
-  border-color: #E5E7EB;
-}
-[data-theme="light"] .alert-card-title { color: #111827; }
-[data-theme="light"] .alert-item {
-  background: #F9FAFB;
-  border-color: #E5E7EB;
-}
-[data-theme="light"] .alert-item:hover { background: #F3F4F6; }
-[data-theme="light"] .alert-name { color: #111827; }
-[data-theme="light"] .alert-desc { color: #6B7280; }
-[data-theme="light"] .alert-icon.warn  { background: #FFFBEB; }
-[data-theme="light"] .alert-icon.gray  { background: #F3F4F6; }
-
-/* Data table light mode */
-[data-theme="light"] .data-table thead { background: #F9FAFB; }
-[data-theme="light"] .data-table th { color: #6B7280; border-color: #E5E7EB; }
-[data-theme="light"] .data-table td { color: #374151; border-color: #F3F4F6; }
-[data-theme="light"] .data-table tbody tr:hover { background: #F9FAFB; }
-
-/* Card light mode */
-[data-theme="light"] .card { background: #FFFFFF; border-color: #E5E7EB; }
-[data-theme="light"] .card-header { background: #F9FAFB; border-color: #E5E7EB; }
-
-/* Asset cards light mode */
-[data-theme="light"] .asset-card {
-  background: #FFFFFF;
-  border-color: #E5E7EB;
-  box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
-}
-[data-theme="light"] .asset-card:hover {
-  border-color: #93C5FD;
-  box-shadow: 0 4px 12px rgba(0,0,0,.08);
-}
-[data-theme="light"] .card-name { color: #111827; }
-[data-theme="light"] .card-group-tag { color: #6B7280; }
-[data-theme="light"] .card-info-row { color: #6B7280; }
-[data-theme="light"] .card-info-val { color: #374151; }
-[data-theme="light"] .card-info-empty { color: #9CA3AF; }
-[data-theme="light"] .card-footer { background: #F9FAFB; border-color: #E5E7EB; }
-[data-theme="light"] .card-asset-num {
-  background: #EFF6FF; border-color: #BFDBFE; color: #1D4ED8;
-}
-[data-theme="light"] .book-val-label { color: #9CA3AF; }
-[data-theme="light"] .book-val-num { color: #111827; }
-[data-theme="light"] .book-val-num.success { color: #059669; }
-[data-theme="light"] .book-val-num.danger  { color: #DC2626; }
-
-/* Filter bar light mode */
-[data-theme="light"] .filter-bar,
-[data-theme="light"] .list-sticky { background: #F4F6FA; }
-[data-theme="light"] .search-field-lg {
-  background: #FFFFFF; border-color: #D1D5DB;
-}
-[data-theme="light"] .search-field-lg input { color: #111827; }
-[data-theme="light"] .filter-select {
-  background: #FFFFFF; border-color: #D1D5DB; color: #111827;
-}
-[data-theme="light"] .export-dropdown {
-  background: #FFFFFF; border-color: #E5E7EB;
-}
-[data-theme="light"] .export-item { color: #374151; }
-[data-theme="light"] .export-item:hover { background: #F9FAFB; }
-
-/* View toggle */
-[data-theme="light"] .view-toggle { background: #F3F4F6; border-color: #E5E7EB; }
-[data-theme="light"] .view-btn.active { background: #FFFFFF; color: #111827; }
-
-/* Panel light mode */
-[data-theme="light"] #panel { background: #FFFFFF; border-color: #E5E7EB; }
-[data-theme="light"] .panel-topbar {
-  background: #FFFFFF; border-color: #E5E7EB;
-}
-[data-theme="light"] .panel-topbar-label { color: #6B7280; }
-[data-theme="light"] .panel-tabs { background: #F9FAFB; border-color: #E5E7EB; }
-[data-theme="light"] .ptab { color: #6B7280; }
-[data-theme="light"] .ptab:hover { color: #111827; }
-[data-theme="light"] .ptab.active { color: #2563EB; }
-
-/* Asset profile light mode */
-[data-theme="light"] .ap-section-hd { background: #FFFFFF; }
-[data-theme="light"] .ap-section-hd:hover { background: #F9FAFB; }
-[data-theme="light"] .ap-section-title { color: #111827; }
-[data-theme="light"] .ap-section-body { background: #FFFFFF; }
-[data-theme="light"] .info-table .ik { color: #9CA3AF; }
-[data-theme="light"] .info-table .iv { color: #374151; }
-[data-theme="light"] .info-table tr { border-color: #F3F4F6; }
-
-/* Financial section light mode */
-[data-theme="light"] .p-fin { background: #F9FAFB; border-color: #E5E7EB; }
-[data-theme="light"] .stat-box { background: #F9FAFB; border-color: #E5E7EB; }
-[data-theme="light"] .stat-k { color: #9CA3AF; }
-[data-theme="light"] .stat-v { color: #111827; }
-[data-theme="light"] .gauge-track { background: #E5E7EB; }
-
-/* Field info light mode */
-[data-theme="light"] .p-edit { background: #FFFFFF; border-color: #E5E7EB; }
-[data-theme="light"] .p-edit-label { color: #6B7280; }
-[data-theme="light"] .p-edit-hint { color: #9CA3AF; }
-[data-theme="light"] .form-input,
-[data-theme="light"] .form-textarea {
-  background: #F9FAFB; border-color: #D1D5DB; color: #111827;
-}
-[data-theme="light"] .form-label { color: #374151; }
-[data-theme="light"] .form-input:focus,
-[data-theme="light"] .form-textarea:focus {
-  background: #FFFFFF; border-color: #3B82F6;
-}
-
-/* Timeline light mode */
-[data-theme="light"] .timeline { background: #FFFFFF; }
-[data-theme="light"] .tl-body .tl-type-label { color: #111827; }
-[data-theme="light"] .tl-time { color: #9CA3AF; }
-[data-theme="light"] .tl-desc { color: #374151; }
-[data-theme="light"] .tl-user { color: #9CA3AF; }
-[data-theme="light"] .tl-list::before { background: #E5E7EB; }
-[data-theme="light"] .tl-purchase .tl-icon-wrap { background: #EFF6FF; color: #2563EB; }
-[data-theme="light"] .tl-maintenance .tl-icon-wrap { background: #FEF2F2; color: #DC2626; }
-[data-theme="light"] .tl-inspection .tl-icon-wrap { background: #ECFDF5; color: #059669; }
-[data-theme="light"] .tl-edit .tl-icon-wrap { background: #F3F4F6; color: #6B7280; }
-
-/* Photo gallery light mode */
-[data-theme="light"] .photo-upload-area {
-  border-color: #D1D5DB; background: #F9FAFB;
-}
-[data-theme="light"] .photo-upload-area:hover {
-  border-color: #3B82F6; background: #EFF6FF;
-}
-[data-theme="light"] .photo-upload-title { color: #111827; }
-[data-theme="light"] .photo-upload-sub { color: #9CA3AF; }
-[data-theme="light"] .photo-upload-icon { background: #F3F4F6; border-color: #E5E7EB; }
-[data-theme="light"] .photo-upload-icon svg { color: #6B7280; }
-
-/* Badges light mode */
-[data-theme="light"] .badge-success { background: #ECFDF5; color: #047857; border-color: #D1FAE5; }
-[data-theme="light"] .badge-danger  { background: #FEF2F2; color: #B91C1C; border-color: #FEE2E2; }
-[data-theme="light"] .badge-warning { background: #FFFBEB; color: #B45309; border-color: #FDE68A; }
-[data-theme="light"] .badge-primary { background: #EFF6FF; color: #1D4ED8; border-color: #DBEAFE; }
-
-/* Section headers */
-[data-theme="light"] .sec-label { color: #6B7280; }
-[data-theme="light"] .page-hd-eyebrow { color: #2563EB; }
-[data-theme="light"] .page-hd-title { color: #111827; }
-[data-theme="light"] .page-hd-sub { color: #6B7280; }
-
-/* Skeleton light mode */
-[data-theme="light"] .skel {
-  background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
-  background-size: 200% 100%;
-}
-[data-theme="light"] .skeleton-card { background: #FFFFFF; border-color: #E5E7EB; }
-[data-theme="light"] .skel-footer { background: #F9FAFB; border-color: #E5E7EB; }
-
-/* Toast */
-[data-theme="light"] .toast {
-  background: #1F2937; color: #F9FAFB;
-  border-color: rgba(0,0,0,.1);
-}
-
-/* QR Modal */
-[data-theme="light"] .qr-modal-card { background: #FFFFFF; border-color: #E5E7EB; }
-[data-theme="light"] .qr-modal-title { color: #111827; }
-[data-theme="light"] .qr-modal-sub { color: #6B7280; }
-[data-theme="light"] .qr-modal-close {
-  background: #F9FAFB; border-color: #E5E7EB; color: #374151;
-}
-
-/* Logout modal */
-[data-theme="light"] .logout-card { background: #FFFFFF; border-color: #E5E7EB; }
-[data-theme="light"] .logout-title { color: #111827; }
-[data-theme="light"] .logout-sub { color: #6B7280; }
-
 </style>
 </head>
 <body>
@@ -2040,8 +1815,8 @@ input, textarea, select { font-family: var(--font-thai); }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
       </div>
       <div class="login-logo-text">
-        <div class="login-logo-name">Smart Asset Tracker 1.0</div>
-        <div class="login-logo-sub">CPF · ธุรกิจพันธุ์กุ้งทะเล 2 · ศูนย์วิจัยหัวกุญแจ</div>
+        <div class="login-logo-name">Smart Asset Tracker</div>
+        <div class="login-logo-sub">CPF · ศูนย์วิจัยหัวกุญแจ</div>
       </div>
     </div>
     <div class="login-title">เข้าสู่ระบบ</div>
@@ -2053,12 +1828,7 @@ input, textarea, select { font-family: var(--font-thai); }
     </div>
     <div class="login-field">
       <label class="login-label">Password</label>
-      <div style="position:relative">
-        <input class="login-input" id="login-pass" type="password" placeholder="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:48px">
-        <button type="button" onclick="togglePassEye()" id="eye-btn" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(255,255,255,.35);padding:4px;display:flex;align-items:center;transition:color .15s" title="แสดง/ซ่อนรหัสผ่าน">
-          <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-      </div>
+      <input class="login-input" id="login-pass" type="password" placeholder="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
 
     <button class="login-btn" id="login-btn" onclick="doLogin()">
@@ -2069,8 +1839,7 @@ input, textarea, select { font-family: var(--font-thai); }
 
     <div class="login-footer">
       ระบบจัดการทรัพย์สินถาวร<br>
-      CPF Internal Use Only<br>
-      <span style="margin-top:8px;display:inline-block;opacity:.5">พัฒนาระบบโดย Atit Chimnan</span>
+      CP Foods · Internal Use Only
     </div>
   </div>
 </div>
@@ -2097,8 +1866,8 @@ input, textarea, select { font-family: var(--font-thai); }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
     </div>
     <div class="sidebar-brand-text">
-      <div class="sidebar-brand-name">Smart Asset Tracker 1.0</div>
-      <div class="sidebar-brand-sub">CPF · ธุรกิจพันธุ์กุ้งทะเล 2 · ศูนย์วิจัยหัวกุญแจ</div>
+      <div class="sidebar-brand-name">Smart Asset Tracker</div>
+      <div class="sidebar-brand-sub">CPF · ศูนย์วิจัยหัวกุญแจ</div>
     </div>
   </div>
 
@@ -2114,11 +1883,11 @@ input, textarea, select { font-family: var(--font-thai); }
     </button>
 
     <div class="nav-section-label">การจัดการ</div>
-    <button class="sidebar-item" onclick="setFilterStat('active');switchTab('list',document.getElementById('snav-list'))">
+    <button class="sidebar-item" onclick="switchTab('list',document.getElementById('snav-list'));setFilterStat('active')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
       กำลังตัดค่าเสื่อม
     </button>
-    <button class="sidebar-item" onclick="setFilterStat('done');switchTab('list',document.getElementById('snav-list'))">
+    <button class="sidebar-item" onclick="switchTab('list',document.getElementById('snav-list'));setFilterStat('done')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
       หมดอายุทางบัญชี
     </button>
@@ -2166,6 +1935,10 @@ input, textarea, select { font-family: var(--font-thai); }
   <div class="spinner"></div>
   <div class="loading-label" style="margin-top:16px">กำลังโหลดข้อมูล...</div>
 </div>
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="loading-label">กำลังโหลดข้อมูล...</div>
+</div>
 
 <!-- Overlay -->
 <div id="overlay" onclick="closePanel()"></div>
@@ -2202,6 +1975,9 @@ input, textarea, select { font-family: var(--font-thai); }
     </div>
   </div>
 </div>
+
+  </div><!-- end main-content -->
+</div><!-- end main-area -->
 
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
@@ -2342,13 +2118,13 @@ input, textarea, select { font-family: var(--font-thai); }
 
   </div>
 
-  </div><!-- end main-content -->
-</div><!-- end main-area -->
+
 
 
 
 
 <script>
+
 
 // ── Auth Config ───────────────────────────────────────────────
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbx1REt27fSm0e3SH0_8I1ujSwvhK2HMuEeaCD9_Occ7GS9cVq4dYIafI4DHHzHQB2NI/exec';
@@ -2992,7 +2768,7 @@ function toggleSection(id){
 }
 
 // ── QR Code (canvas-based, no lib needed) ─────────────
-function showQR(assetId){
+function showQR(assetId){ assetId=String(assetId);
   var url=window.location.origin+window.location.pathname+'?asset='+assetId;
   document.getElementById('qr-title').textContent='Asset '+assetId;
   document.getElementById('qr-sub').textContent='สแกนเพื่อเปิดทรัพย์สินนี้';
@@ -3408,6 +3184,7 @@ function init(){
   // else: login screen already visible by default
 }
 init();
+
 </script>
 </body>
 </html>
