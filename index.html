@@ -18,6 +18,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════════
    PHASE 1 DESIGN SYSTEM — Enterprise Asset Management
@@ -2047,6 +2048,53 @@ input, textarea, select { font-family: var(--font-thai); }
   .mob-back-btn { display: none !important; }
 }
 
+
+/* QR Scanner Modal */
+.qr-scan-modal {
+  position: fixed; inset: 0; z-index: 10000;
+  background: #0A0F1E; display: none;
+  flex-direction: column;
+}
+.qr-scan-modal.open { display: flex; }
+.qr-scan-header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px; background: rgba(0,0,0,.3);
+}
+.qr-scan-close {
+  width: 38px; height: 38px; border: none;
+  background: rgba(255,255,255,.12); border-radius: 10px;
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.qr-scan-close svg { width: 18px; height: 18px; }
+.qr-scan-title { font-size: 17px; font-weight: 700; color: #fff; }
+#qr-reader { flex: 1; max-height: 60vh; overflow: hidden; }
+#qr-reader video { width: 100% !important; object-fit: cover; }
+.qr-scan-hint {
+  text-align: center; color: rgba(255,255,255,.7);
+  font-size: 14px; padding: 16px;
+}
+.qr-scan-manual { padding: 20px 24px 32px; }
+
+
+@media (max-width: 768px) {
+  /* Bottom nav always visible on mobile (move outside mobile-landing) */
+  #mobile-bottom-nav-global {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 95;
+    background: var(--surface-0);
+    border-top: 1px solid var(--border);
+    display: flex; padding: 8px 4px;
+    box-shadow: 0 -2px 12px rgba(0,0,0,.08);
+  }
+  /* Add padding to main-content so content isn't hidden behind nav */
+  body:not(.mobile-home) .main-content { padding-bottom: 80px !important; }
+  /* Hide the in-landing bottom nav (use global one) */
+  .mob-bottom-nav { display: none !important; }
+}
+@media (min-width: 769px) {
+  #mobile-bottom-nav-global { display: none !important; }
+}
+
 </style>
 </head>
 <body>
@@ -2168,14 +2216,34 @@ input, textarea, select { font-family: var(--font-thai); }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
       <span class="mob-nav-label">สแกน QR</span>
     </button>
-    <button class="mob-nav-item" onclick="mobExport()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      <span class="mob-nav-label">Export</span>
+    <button class="mob-nav-item" onclick="mobReports()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span class="mob-nav-label">รายงาน</span>
     </button>
     <button class="mob-nav-item" onclick="showLogout()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       <span class="mob-nav-label">บัญชี</span>
     </button>
+  </div>
+</div>
+
+
+<!-- QR SCANNER MODAL -->
+<div class="qr-scan-modal" id="qr-scan-modal">
+  <div class="qr-scan-header">
+    <button class="qr-scan-close" onclick="closeQRScanner()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="qr-scan-title">สแกน QR Code</div>
+  </div>
+  <div id="qr-reader" style="width:100%"></div>
+  <div class="qr-scan-hint">เล็งกล้องไปที่ QR Code บนทรัพย์สิน</div>
+  <div class="qr-scan-manual">
+    <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:10px">หรือพิมพ์เลข Asset</div>
+    <div style="display:flex;gap:8px">
+      <input id="qr-manual-input" placeholder="เช่น 13564" style="flex:1;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-size:15px;outline:none">
+      <button onclick="qrManualGo()" style="padding:11px 18px;border-radius:10px;border:none;background:#2563EB;color:#fff;font-weight:600;cursor:pointer">เปิด</button>
+    </div>
   </div>
 </div>
 
@@ -3389,6 +3457,12 @@ function renderMobileLanding(){
   var ti=document.getElementById('mob-theme-icon'); if(ti)ti.textContent=isDark?'☀️':'🌙';
 }
 
+
+function mobReports(){
+  document.body.classList.remove('mobile-home');
+  switchTab('dash', document.getElementById('snav-dash'));
+}
+
 function mobHome(){
   document.body.classList.add('mobile-home');
   document.querySelectorAll('.mob-nav-item').forEach(function(b){b.classList.remove('active');});
@@ -3407,9 +3481,51 @@ function mobGoList(filterVal){
 
 function mobExport(){ exportExcel(); }
 
+var _qrScanner = null;
 function mobScanQR(){
-  // Show a message - QR scanning requires camera access
-  alert('สแกน QR: ใช้กล้องมือถือสแกน QR ที่ติดบนทรัพย์สิน\nระบบจะเปิดข้อมูลทรัพย์สินนั้นอัตโนมัติ');
+  document.getElementById('qr-scan-modal').classList.add('open');
+  if(typeof Html5Qrcode==='undefined'){
+    document.getElementById('qr-reader').innerHTML='<div style="padding:40px;text-align:center;color:rgba(255,255,255,.6)">กำลังโหลดตัวสแกน...<br>หากไม่ขึ้น ให้พิมพ์เลข Asset ด้านล่าง</div>';
+    return;
+  }
+  _qrScanner = new Html5Qrcode('qr-reader');
+  _qrScanner.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: { width: 220, height: 220 } },
+    function(decodedText){
+      // Extract asset ID from URL or use as-is
+      var assetId = decodedText;
+      var m = decodedText.match(/[?&]asset=([^&]+)/);
+      if(m) assetId = decodeURIComponent(m[1]);
+      qrFound(assetId);
+    },
+    function(err){ /* ignore scan errors */ }
+  ).catch(function(e){
+    document.getElementById('qr-reader').innerHTML='<div style="padding:40px;text-align:center;color:rgba(255,255,255,.6)">เปิดกล้องไม่ได้: '+e+'<br><br>กรุณาพิมพ์เลข Asset ด้านล่าง</div>';
+  });
+}
+
+function qrFound(assetId){
+  closeQRScanner();
+  var found = ALL.find(function(a){return a.asset===assetId||a._docId===assetId;});
+  if(found){
+    document.body.classList.remove('mobile-home');
+    openPanel(found._docId||found.asset);
+  } else {
+    showToast('ไม่พบทรัพย์สิน: '+assetId);
+  }
+}
+
+function qrManualGo(){
+  var v=document.getElementById('qr-manual-input').value.trim();
+  if(v) qrFound(v);
+}
+
+function closeQRScanner(){
+  document.getElementById('qr-scan-modal').classList.remove('open');
+  if(_qrScanner){
+    _qrScanner.stop().then(function(){_qrScanner.clear();_qrScanner=null;}).catch(function(){_qrScanner=null;});
+  }
 }
 
 
@@ -3566,5 +3682,29 @@ function init(){
 init();
 
 </script>
+<!-- GLOBAL MOBILE BOTTOM NAV -->
+<div id="mobile-bottom-nav-global">
+  <button class="mob-nav-item" onclick="mobHome()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <span class="mob-nav-label">หน้าหลัก</span>
+  </button>
+  <button class="mob-nav-item" onclick="mobGoList('')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+    <span class="mob-nav-label">รายการ</span>
+  </button>
+  <button class="mob-nav-item" onclick="mobScanQR()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+    <span class="mob-nav-label">สแกน QR</span>
+  </button>
+  <button class="mob-nav-item" onclick="mobReports()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    <span class="mob-nav-label">รายงาน</span>
+  </button>
+  <button class="mob-nav-item" onclick="showLogout()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span class="mob-nav-label">บัญชี</span>
+  </button>
+</div>
+
 </body>
 </html>
