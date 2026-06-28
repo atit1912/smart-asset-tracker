@@ -2371,8 +2371,9 @@ function renderDash(){
   }).join('');
 
   document.getElementById('dash-content').innerHTML=
+    '<div class="dash-grid">'
     // KPI row
-    '<div class="dash-kpi-row">'
+    +'<div class="dash-kpi-row">'
     +'<div class="kpi-card primary"><div class="kpi-header"><div class="kpi-label">ทรัพย์สินทั้งหมด</div><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div></div><div class="kpi-value primary mono">'+fmt0(ALL.length)+'</div><div class="kpi-foot">รายการ</div></div>'
     +'<div class="kpi-card success"><div class="kpi-header"><div class="kpi-label">มูลค่าคงเหลือ (สด)</div></div><div class="kpi-value success mono">'+fmt(tBook)+'</div><div class="kpi-foot">บาท</div></div>'
     +'<div class="kpi-card"><div class="kpi-header"><div class="kpi-label">มูลค่าซื้อรวม</div></div><div class="kpi-value mono">'+fmt(tAcq)+'</div><div class="kpi-foot">บาท</div></div>'
@@ -3156,6 +3157,11 @@ async function initApp(){
     var sel=document.getElementById('fgrp');
     grps.forEach(function(g){var o=document.createElement('option');o.value=g;o.textContent=g.replace(/^\d+\./,'');sel.appendChild(o);});
     filtered=[...ALL];
+    // Load metaCache for locations (used in alerts + cards)
+    try{
+      var metaSnap=await db.collection('asset_meta').get();
+      metaSnap.forEach(function(d){metaCache[d.id]=d.data();});
+    }catch(e){console.warn('metaCache load failed:',e);}
     renderDash();
     renderList();
     var ldEl=document.getElementById('loading');
