@@ -1878,6 +1878,18 @@ input, textarea, select { font-family: var(--font-thai); }
 [data-theme="light"] .stat-v { color:#111827; }
 [data-theme="light"] .form-input,[data-theme="light"] .form-textarea { background:#F9FAFB; color:#111827; border-color:#D1D5DB; }
 
+
+.sidebar-logout-btn {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; margin-top: 8px; padding: 9px 10px;
+  background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.2);
+  border-radius: 8px; color: #F87171; font-size: 13px; font-weight: 600;
+  cursor: pointer; font-family: var(--font-thai);
+  transition: background .15s;
+}
+.sidebar-logout-btn:hover { background: rgba(239,68,68,.2); }
+.sidebar-logout-btn svg { width: 15px; height: 15px; }
+
 </style>
 </head>
 <body>
@@ -1980,6 +1992,10 @@ input, textarea, select { font-family: var(--font-thai); }
         <div class="sidebar-user-role">ผู้ดูแลระบบ</div>
       </div>
     </div>
+    <button class="sidebar-logout-btn" onclick="showLogout()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      ออกจากระบบ
+    </button>
   </div>
 </div>
 
@@ -1987,29 +2003,6 @@ input, textarea, select { font-family: var(--font-thai); }
 <button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 </button>
-
-<!-- Main area -->
-<div class="main-area">
-  <!-- Top bar -->
-  <div class="main-topbar">
-    <div class="main-topbar-title" id="main-topbar-title">แผงควบคุม</div>
-    <div class="live-pill"><div class="live-dot"></div>LIVE</div>
-    <div class="top-clock mono" id="top-clock"></div>
-    <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="เปลี่ยนธีม">🌙</button>
-    <div class="user-chip" onclick="showLogout()" title="ออกจากระบบ">
-      <div class="user-chip-avatar" id="topbar-avatar">A</div>
-      <div class="user-chip-name" id="topbar-username">Admin</div>
-    </div>
-  </div>
-
-  <!-- Scroll content -->
-  <div class="main-content">
-
-<!-- Loading -->
-<div id="loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px">
-  <div class="spinner"></div>
-  <div class="loading-label" style="margin-top:16px">กำลังโหลดข้อมูล...</div>
-</div>
 
 <!-- Overlay -->
 <div id="overlay" onclick="closePanel()"></div>
@@ -2076,12 +2069,30 @@ input, textarea, select { font-family: var(--font-thai); }
   </div>
 </div>
 
-<!-- Topbar -->
+<!-- Main area -->
+<div class="main-area">
+  <!-- Top bar -->
+  <div class="main-topbar">
+    <div class="main-topbar-title" id="main-topbar-title">แผงควบคุม</div>
+    <div class="live-pill"><div class="live-dot"></div>LIVE</div>
+    <div class="top-clock mono" id="top-clock"></div>
+    <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="เปลี่ยนธีม">🌙</button>
+    <div class="user-chip" onclick="showLogout()" title="ออกจากระบบ">
+      <div class="user-chip-avatar" id="topbar-avatar">A</div>
+      <div class="user-chip-name" id="topbar-username">Admin</div>
+    </div>
+  </div>
 
+  <!-- Scroll content -->
+  <div class="main-content">
 
-<!-- Main content -->
+<!-- Loading -->
+<div id="loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px">
+  <div class="spinner"></div>
+  <div class="loading-label" style="margin-top:16px">กำลังโหลดข้อมูล...</div>
+</div>
 
-  <!-- Dashboard -->
+<!-- Dashboard -->
   <div class="tab-pane active" id="tab-dash">
     <div class="page-hd">
       <div class="page-hd-left">
