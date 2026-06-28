@@ -1803,6 +1803,12 @@ input, textarea, select { font-family: var(--font-thai); }
 .logout-actions { display: flex; gap: 10px; }
 .logout-actions .btn { flex: 1; justify-content: center; }
 
+
+/* Loading div - inline only, not fixed */
+#loading {
+  background: transparent;
+  min-height: 200px;
+}
 </style>
 </head>
 <body>
@@ -1934,10 +1940,6 @@ input, textarea, select { font-family: var(--font-thai); }
 <div id="loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px">
   <div class="spinner"></div>
   <div class="loading-label" style="margin-top:16px">กำลังโหลดข้อมูล...</div>
-</div>
-<div id="loading">
-  <div class="spinner"></div>
-  <div class="loading-label">กำลังโหลดข้อมูล...</div>
 </div>
 
 <!-- Overlay -->
@@ -2205,7 +2207,8 @@ function showLoginError(msg){
 
 function showApp(user){
   // Hide login, show app
-  document.getElementById('login-screen').classList.add('hidden');
+  var ls=document.getElementById('login-screen');
+  if(ls){ls.classList.add('hidden');ls.style.display='none';}
   // Load data if not loaded yet
   if(!ALL.length) initApp();
   // Update user chip
@@ -3141,9 +3144,12 @@ function showSkeleton(){
 
 // ── Init ──────────────────────────────────────────────
 async function initApp(){
+  console.log('initApp: starting...');
   try{
     showSkeleton();
+    console.log('initApp: connecting to Firestore...');
     var snap=await db.collection('assets').get();
+    console.log('initApp: got', snap.size, 'assets');
     ALL=[];
     snap.forEach(function(d){var rec=d.data();rec._docId=d.id;ALL.push(rec);});
     ALL.sort(function(a,b){return +a.asset-+b.asset;});
@@ -3153,7 +3159,7 @@ async function initApp(){
     filtered=[...ALL];
     renderDash();
     renderList();
-    var ldEl=document.getElementById('loading');if(ldEl)ldEl.style.display='none';
+    var ldEl=document.getElementById('loading');if(ldEl){ldEl.style.display='none';ldEl.style.visibility='hidden';}
     document.getElementById('card-grid').className='asset-grid';
     // Handle ?asset=ID URL param (from QR code scan)
     var urlParams=new URLSearchParams(window.location.search);
