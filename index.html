@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Smart Asset Tracker</title>
+<title>Smart Asset Tracker 1.0</title>
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -17,6 +17,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════════
    PHASE 1 DESIGN SYSTEM — Enterprise Asset Management
@@ -1455,11 +1456,486 @@ input, textarea, select { font-family: var(--font-thai); }
   .stat-grid { grid-template-columns: 1fr; }
 }
 
+
+/* ═══════════════════════════════════════════════════
+   PHASE 5 — Sidebar + Donut chart + Alerts
+═══════════════════════════════════════════════════ */
+
+/* App shell */
+.app-shell {
+  display: flex; height: 100vh; overflow: hidden;
+}
+
+/* ── Sidebar ──────────────────────────────────────── */
+.sidebar {
+  width: 220px; flex-shrink: 0;
+  background: var(--topbar-bg);
+  display: flex; flex-direction: column;
+  border-right: 1px solid rgba(255,255,255,.06);
+  position: fixed; left: 0; top: 0; bottom: 0; z-index: 50;
+  transition: transform .25s;
+}
+.sidebar-brand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 20px 16px 16px; border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.sidebar-brand-mark {
+  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-700));
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 1px rgba(59,130,246,.3);
+}
+.sidebar-brand-mark svg { width: 18px; height: 18px; color: #fff; }
+.sidebar-brand-text { line-height: 1.2; }
+.sidebar-brand-name { font-size: 13px; font-weight: 700; color: #F8FAFC; letter-spacing: -.01em; }
+.sidebar-brand-sub { font-size: 10px; color: rgba(255,255,255,.3); letter-spacing: .04em; }
+
+.sidebar-nav { flex: 1; padding: 12px 8px; overflow-y: auto; }
+.sidebar-nav::-webkit-scrollbar { display: none; }
+
+.nav-section-label {
+  font-size: 9.5px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: rgba(255,255,255,.25);
+  padding: 12px 10px 6px; margin-top: 4px;
+}
+.sidebar-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: 8px;
+  color: rgba(255,255,255,.45); font-size: 13px; font-weight: 500;
+  cursor: pointer; border: none; background: none;
+  width: 100%; text-align: left; font-family: var(--font-thai);
+  transition: background .12s, color .12s;
+  margin-bottom: 2px;
+}
+.sidebar-item:hover { background: rgba(255,255,255,.07); color: rgba(255,255,255,.8); }
+.sidebar-item.active { background: rgba(59,130,246,.2); color: #60A5FA; }
+.sidebar-item.active svg { color: #60A5FA; }
+.sidebar-item svg { width: 16px; height: 16px; flex-shrink: 0; color: rgba(255,255,255,.3); }
+.sidebar-item .badge-count {
+  margin-left: auto; background: var(--danger-500); color: #fff;
+  font-size: 10px; font-weight: 700; padding: 2px 6px;
+  border-radius: 10px; font-family: var(--font-mono);
+}
+
+.sidebar-footer {
+  padding: 12px 8px 16px;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+.sidebar-user {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 8px;
+}
+.sidebar-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg,#3B82F6,#8B5CF6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.sidebar-user-info { line-height: 1.3; }
+.sidebar-user-name { font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,.7); }
+.sidebar-user-role { font-size: 10.5px; color: rgba(255,255,255,.3); }
+
+/* Sidebar toggle for mobile */
+.sidebar-toggle {
+  display: none; position: fixed; top: 14px; left: 14px; z-index: 60;
+  width: 36px; height: 36px; border-radius: 9px;
+  background: var(--topbar-bg); border: 1px solid rgba(255,255,255,.12);
+  color: rgba(255,255,255,.7); align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.sidebar-toggle svg { width: 18px; height: 18px; }
+.sidebar-backdrop {
+  display: none; position: fixed; inset: 0; z-index: 49;
+  background: rgba(0,0,0,.5); backdrop-filter: blur(2px);
+}
+
+/* ── Main content area ────────────────────────────── */
+.main-area {
+  flex: 1; margin-left: 220px;
+  display: flex; flex-direction: column;
+  height: 100vh; overflow: hidden;
+}
+.main-topbar {
+  height: 52px; flex-shrink: 0;
+  background: var(--surface-0);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 20px;
+  gap: 12px;
+}
+.main-topbar-title {
+  font-size: 14px; font-weight: 700; color: var(--ink); flex: 1;
+}
+.main-content { flex: 1; overflow-y: auto; padding: 24px 24px 80px; }
+
+/* ── Dashboard grid ───────────────────────────────── */
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 320px;
+  grid-template-rows: auto auto auto;
+  gap: 16px;
+}
+.dash-kpi-row {
+  grid-column: 1/-1;
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 16px;
+}
+.dash-chart-block { grid-column: 1/4; }
+.dash-alert-block { grid-column: 4/5; grid-row: 2/4; }
+.dash-table-block { grid-column: 1/4; }
+
+/* ── Donut chart ──────────────────────────────────── */
+.donut-card {
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+.donut-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.donut-title { font-size: 13px; font-weight: 700; color: var(--ink); }
+.donut-sub { font-size: 12px; color: var(--ink-4); margin-top: 2px; }
+
+.donut-body { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+.donut-chart-wrap {
+  position: relative; width: 160px; height: 160px; flex-shrink: 0;
+}
+.donut-svg { width: 160px; height: 160px; transform: rotate(-90deg); }
+.donut-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; pointer-events: none;
+}
+.donut-center-val {
+  font-family: var(--font-mono); font-size: 22px; font-weight: 800;
+  color: var(--ink); line-height: 1; letter-spacing: -.02em;
+}
+.donut-center-label { font-size: 11px; color: var(--ink-4); margin-top: 3px; font-weight: 600; }
+
+.donut-legend { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.donut-legend-item {
+  display: flex; align-items: center; gap: 8px; font-size: 12.5px;
+}
+.donut-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.donut-legend-name { flex: 1; color: var(--ink-2); font-weight: 500; }
+.donut-legend-val { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); }
+.donut-legend-pct { font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); width: 36px; text-align: right; }
+
+/* ── Alert cards ──────────────────────────────────── */
+.alert-card {
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 16px;
+  box-shadow: var(--shadow-sm);
+  height: 100%; display: flex; flex-direction: column;
+}
+.alert-card-title {
+  font-size: 13px; font-weight: 700; color: var(--ink);
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.alert-card-title svg { width: 16px; height: 16px; color: var(--warning-500); }
+.alert-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.alert-list::-webkit-scrollbar { width: 3px; }
+.alert-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+
+.alert-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px; border-radius: var(--r-md);
+  background: var(--surface-1); border: 1px solid var(--border);
+  cursor: pointer; transition: background .12s;
+}
+.alert-item:hover { background: var(--surface-2); }
+.alert-icon {
+  width: 30px; height: 30px; border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.alert-icon svg { width: 14px; height: 14px; }
+.alert-icon.warn  { background: var(--warning-50);  color: var(--warning-500); }
+.alert-icon.danger{ background: var(--danger-50);   color: var(--danger-500); }
+.alert-icon.info  { background: var(--primary-50);  color: var(--primary-500); }
+.alert-icon.gray  { background: var(--surface-2);   color: var(--ink-3); }
+.alert-body { flex: 1; min-width: 0; }
+.alert-name { font-size: 12.5px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.alert-desc { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+.alert-empty { text-align: center; padding: 24px; color: var(--ink-4); font-size: 13px; }
+
+/* Responsive sidebar */
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: none; }
+  .sidebar-backdrop.open { display: block; }
+  .sidebar-toggle { display: flex; }
+  .main-area { margin-left: 0; }
+  .main-topbar { padding-left: 58px; }
+  .dash-grid { grid-template-columns: 1fr; }
+  .dash-kpi-row { grid-template-columns: 1fr 1fr; }
+  .dash-chart-block, .dash-alert-block, .dash-table-block { grid-column: 1/-1; }
+  .donut-body { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 640px) {
+  .dash-kpi-row { grid-template-columns: 1fr 1fr; }
+  .main-content { padding: 16px 16px 80px; }
+}
+
+
+/* ═══════════════════════════════════════════════════
+   LOGIN SCREEN
+═══════════════════════════════════════════════════ */
+#login-screen {
+  position: fixed; inset: 0; z-index: 1000;
+  background: #070D1A;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+#login-screen.hidden { display: none; }
+
+.login-card {
+  width: 100%; max-width: 400px;
+  background: #0F1923;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 24px;
+  padding: 40px 36px;
+  box-shadow: 0 32px 64px rgba(0,0,0,.6);
+}
+
+.login-logo {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 32px; justify-content: center;
+}
+.login-logo-mark {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: linear-gradient(135deg, #2563EB, #1E40AF);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 1px rgba(59,130,246,.4), 0 4px 16px rgba(59,130,246,.3);
+}
+.login-logo-mark svg { width: 22px; height: 22px; color: #fff; }
+.login-logo-text { line-height: 1.2; }
+.login-logo-name { font-size: 16px; font-weight: 700; color: #F8FAFC; letter-spacing: -.01em; }
+.login-logo-sub { font-size: 11px; color: rgba(255,255,255,.3); letter-spacing: .05em; }
+
+.login-title { font-size: 22px; font-weight: 700; color: #F8FAFC; margin-bottom: 6px; text-align: center; letter-spacing: -.02em; }
+.login-sub { font-size: 13.5px; color: rgba(255,255,255,.35); text-align: center; margin-bottom: 28px; }
+
+.login-field { margin-bottom: 14px; }
+.login-label {
+  display: block; font-size: 12px; font-weight: 600;
+  color: rgba(255,255,255,.4); margin-bottom: 8px;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.login-input {
+  width: 100%; padding: 13px 16px;
+  background: rgba(255,255,255,.05);
+  border: 1.5px solid rgba(255,255,255,.08);
+  border-radius: 12px; font-size: 15px;
+  color: #F8FAFC; outline: none;
+  font-family: var(--font-thai);
+  transition: border-color .15s, background .15s;
+}
+.login-input:focus {
+  border-color: #3B82F6;
+  background: rgba(59,130,246,.08);
+}
+.login-input::placeholder { color: rgba(255,255,255,.2); }
+
+.login-btn {
+  width: 100%; padding: 14px;
+  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  color: #fff; border: none; border-radius: 12px;
+  font-size: 15px; font-weight: 700;
+  font-family: var(--font-thai); cursor: pointer;
+  margin-top: 8px;
+  box-shadow: 0 4px 16px rgba(37,99,235,.4);
+  transition: all .15s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.login-btn:hover { background: linear-gradient(135deg, #1D4ED8, #1E40AF); transform: translateY(-1px); }
+.login-btn:active { transform: translateY(0); }
+.login-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+.login-btn svg { width: 16px; height: 16px; }
+
+.login-error {
+  margin-top: 12px; padding: 11px 14px;
+  background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.25);
+  border-radius: 10px; color: #FCA5A5;
+  font-size: 13px; text-align: center;
+  display: none;
+}
+.login-error.show { display: block; }
+
+.login-footer {
+  margin-top: 28px; text-align: center;
+  font-size: 12px; color: rgba(255,255,255,.2);
+  line-height: 1.6;
+}
+
+/* User chip in topbar */
+.user-chip {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 20px; padding: 5px 12px 5px 6px;
+  cursor: pointer; transition: background .15s;
+}
+.user-chip:hover { background: rgba(255,255,255,.1); }
+.user-chip-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: linear-gradient(135deg,#3B82F6,#8B5CF6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff;
+}
+.user-chip-name { font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,.75); }
+
+/* Logout confirm */
+.logout-modal {
+  position: fixed; inset: 0; z-index: 999;
+  background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center; padding: 20px;
+}
+.logout-modal.open { display: flex; }
+.logout-card {
+  background: var(--surface-0); border-radius: 20px;
+  padding: 28px 28px 24px; max-width: 320px; width: 100%;
+  box-shadow: var(--shadow-xl); text-align: center;
+  border: 1px solid var(--border);
+}
+.logout-title { font-size: 17px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+.logout-sub { font-size: 13.5px; color: var(--ink-3); margin-bottom: 24px; line-height: 1.6; }
+.logout-actions { display: flex; gap: 10px; }
+.logout-actions .btn { flex: 1; justify-content: center; }
+
 </style>
 </head>
 <body>
 
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      </div>
+      <div class="login-logo-text">
+        <div class="login-logo-name">Smart Asset Tracker 1.0</div>
+        <div class="login-logo-sub">CPF · ธุรกิจพันธุ์กุ้งทะเล 2 · ศูนย์วิจัยหัวกุญแจ</div>
+      </div>
+    </div>
+    <div class="login-title">เข้าสู่ระบบ</div>
+    <div class="login-sub">กรอก username และ password เพื่อใช้งาน</div>
+
+    <div class="login-field">
+      <label class="login-label">Username</label>
+      <input class="login-input" id="login-user" type="text" placeholder="username" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+    </div>
+    <div class="login-field">
+      <label class="login-label">Password</label>
+      <input class="login-input" id="login-pass" type="password" placeholder="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+
+    <button class="login-btn" id="login-btn" onclick="doLogin()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+      เข้าสู่ระบบ
+    </button>
+    <div class="login-error" id="login-error"></div>
+
+    <div class="login-footer">
+      ระบบจัดการทรัพย์สินถาวร<br>
+      CPF Internal Use Only<br>
+      <span style="margin-top:8px;display:inline-block;opacity:.5">พัฒนาระบบโดย Atit Chimnan</span>
+    </div>
+  </div>
+</div>
+
+<!-- LOGOUT MODAL -->
+<div class="logout-modal" id="logout-modal">
+  <div class="logout-card">
+    <div class="logout-title">ออกจากระบบ?</div>
+    <div class="logout-sub" id="logout-user-name">คุณต้องการออกจากระบบใช่ไหมครับ?</div>
+    <div class="logout-actions">
+      <button class="btn btn-ghost" onclick="closeLogout()">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="confirmLogout()">ออกจากระบบ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sidebar backdrop -->
+<div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-brand-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+    </div>
+    <div class="sidebar-brand-text">
+      <div class="sidebar-brand-name">Smart Asset Tracker 1.0</div>
+      <div class="sidebar-brand-sub">CPF · ธุรกิจพันธุ์กุ้งทะเล 2 · ศูนย์วิจัยหัวกุญแจ</div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">หลัก</div>
+    <button class="sidebar-item active" id="snav-dash" onclick="switchTab('dash',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      แผงควบคุม
+    </button>
+    <button class="sidebar-item" id="snav-list" onclick="switchTab('list',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+      รายการทรัพย์สิน
+    </button>
+
+    <div class="nav-section-label">การจัดการ</div>
+    <button class="sidebar-item" onclick="switchTab('list',document.getElementById('snav-list'));setFilterStat('active')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+      กำลังตัดค่าเสื่อม
+    </button>
+    <button class="sidebar-item" onclick="switchTab('list',document.getElementById('snav-list'));setFilterStat('done')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      หมดอายุทางบัญชี
+    </button>
+    <button class="sidebar-item" onclick="exportExcel()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Export Excel
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar">A</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name">Admin</div>
+        <div class="sidebar-user-role">ผู้ดูแลระบบ</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sidebar mobile toggle -->
+<button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+
+<!-- Main area -->
+<div class="main-area">
+  <!-- Top bar -->
+  <div class="main-topbar">
+    <div class="main-topbar-title" id="main-topbar-title">แผงควบคุม</div>
+    <div class="live-pill"><div class="live-dot"></div>LIVE</div>
+    <div class="top-clock mono" id="top-clock"></div>
+    <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="เปลี่ยนธีม">🌙</button>
+    <div class="user-chip" onclick="showLogout()" title="ออกจากระบบ">
+      <div class="user-chip-avatar" id="topbar-avatar">A</div>
+      <div class="user-chip-name" id="topbar-username">Admin</div>
+    </div>
+  </div>
+
+  <!-- Scroll content -->
+  <div class="main-content">
+
 <!-- Loading -->
+<div id="loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px">
+  <div class="spinner"></div>
+  <div class="loading-label" style="margin-top:16px">กำลังโหลดข้อมูล...</div>
+</div>
 <div id="loading">
   <div class="spinner"></div>
   <div class="loading-label">กำลังโหลดข้อมูล...</div>
@@ -1521,43 +1997,17 @@ input, textarea, select { font-family: var(--font-thai); }
   <div class="qr-modal-card" onclick="event.stopPropagation()">
     <div class="qr-modal-title" id="qr-title">QR Code</div>
     <div class="qr-modal-sub" id="qr-sub">สแกนเพื่อเปิดหน้าทรัพย์สิน</div>
-    <canvas id="qr-canvas" width="200" height="200"></canvas>
+    <div id="qr-canvas-wrap" style="margin:0 auto 16px;width:200px;height:200px"></div>
+    <div style="font-size:11px;color:var(--ink-4);word-break:break-all;margin-bottom:16px;padding:0 8px" id="qr-url-text"></div>
     <button class="qr-modal-close" onclick="closeQR()">ปิด</button>
   </div>
 </div>
 
 <!-- Topbar -->
-<header class="topbar">
-  <a class="brand" href="#">
-    <div class="brand-mark">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-    </div>
-    <div class="brand-text">
-      <div class="brand-name">Smart Asset Tracker</div>
-      <div class="brand-sub">ศูนย์วิจัยหัวกุญแจ · CPF</div>
-    </div>
-  </a>
 
-  <nav class="topbar-nav">
-    <button class="nav-item active" data-tab="dash" onclick="switchTab('dash',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-      ภาพรวม
-    </button>
-    <button class="nav-item" data-tab="list" onclick="switchTab('list',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
-      รายการทรัพย์สิน
-    </button>
-  </nav>
-
-  <div class="topbar-end">
-    <div class="live-pill"><div class="live-dot"></div>LIVE</div>
-    <div class="top-clock mono" id="top-clock"></div>
-    <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="เปลี่ยนธีม">🌙</button>
-  </div>
-</header>
 
 <!-- Main content -->
-<main class="page">
+
   <!-- Dashboard -->
   <div class="tab-pane active" id="tab-dash">
     <div class="page-hd">
@@ -1665,11 +2115,120 @@ input, textarea, select { font-family: var(--font-thai); }
     </div>
 
   </div>
-</main>
+
+  </div><!-- end main-content -->
+</div><!-- end main-area -->
+
 
 
 
 <script>
+
+// ── Auth Config ───────────────────────────────────────────────
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbx1REt27fSm0e3SH0_8I1ujSwvhK2HMuEeaCD9_Occ7GS9cVq4dYIafI4DHHzHQB2NI/exec';
+var _currentUser = null;
+
+// ── Check session on page load ────────────────────────────────
+function checkSession(){
+  var saved = localStorage.getItem('sat_user');
+  if(saved){
+    try{
+      _currentUser = JSON.parse(saved);
+      showApp(_currentUser);
+      return true;
+    }catch(e){ localStorage.removeItem('sat_user'); }
+  }
+  return false;
+}
+
+// ── Login ─────────────────────────────────────────────────────
+async function doLogin(){
+  var userEl = document.getElementById('login-user');
+  var passEl = document.getElementById('login-pass');
+  var errEl  = document.getElementById('login-error');
+  var btn    = document.getElementById('login-btn');
+
+  var username = userEl.value.trim();
+  var password = passEl.value.trim();
+  if(!username || !password){
+    showLoginError('กรุณากรอก username และ password');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;animation:spin .7s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>กำลังเข้าสู่ระบบ...';
+  errEl.classList.remove('show');
+
+  try{
+    var url = GAS_URL + '?action=login&username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password);
+    var res = await fetch(url);
+    var data = await res.json();
+
+    if(data.ok){
+      _currentUser = { username: data.username, name: data.name, loginAt: data.loginAt };
+      localStorage.setItem('sat_user', JSON.stringify(_currentUser));
+      showApp(_currentUser);
+    } else {
+      showLoginError(data.error || 'เข้าสู่ระบบไม่สำเร็จ');
+      btn.disabled = false;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>เข้าสู่ระบบ';
+    }
+  }catch(e){
+    showLoginError('เชื่อมต่อไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ต');
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>เข้าสู่ระบบ';
+  }
+}
+
+function showLoginError(msg){
+  var el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function showApp(user){
+  // Hide login, show app
+  document.getElementById('login-screen').classList.add('hidden');
+  // Load data if not loaded yet
+  if(!ALL.length) initApp();
+  // Update user chip
+  var initial = (user.name||user.username||'A').charAt(0).toUpperCase();
+  var av = document.getElementById('topbar-avatar');
+  var un = document.getElementById('topbar-username');
+  if(av) av.textContent = initial;
+  if(un) un.textContent = user.name || user.username;
+  // Update sidebar user
+  var sav = document.querySelector('.sidebar-avatar');
+  var sname = document.querySelector('.sidebar-user-name');
+  var srole = document.querySelector('.sidebar-user-role');
+  if(sav) sav.textContent = initial;
+  if(sname) sname.textContent = user.name || user.username;
+  if(srole) srole.textContent = user.username;
+}
+
+// ── Logout ────────────────────────────────────────────────────
+function showLogout(){
+  var el = document.getElementById('logout-user-name');
+  if(el && _currentUser) el.textContent = 'ออกจากระบบ "'+(_currentUser.name||_currentUser.username)+'" ใช่ไหมครับ?';
+  document.getElementById('logout-modal').classList.add('open');
+}
+function closeLogout(){
+  document.getElementById('logout-modal').classList.remove('open');
+}
+function confirmLogout(){
+  localStorage.removeItem('sat_user');
+  _currentUser = null;
+  document.getElementById('logout-modal').classList.remove('open');
+  document.getElementById('login-screen').classList.remove('hidden');
+  // Reset login form
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+  document.getElementById('login-error').classList.remove('show');
+  document.getElementById('login-btn').disabled=false;
+  document.getElementById('login-btn').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>เข้าสู่ระบบ';
+}
+
+
 // ── Firebase ──────────────────────────────────────────
 firebase.initializeApp({
   apiKey:"AIzaSyBN8m0MjvGesvWiYZ1IV6kB4CxKBbapxu4",
@@ -1719,52 +2278,110 @@ function renderDash(){
   ALL.forEach(function(a){
     var c=calc(a,now);
     tAcq+=c.acq; tBook+=c.book; tDep+=c.accu;
-    if(c.done)nDone++; else if(c.future)nFuture++; else nActive++;
+    if(c.done) nDone++; else if(c.future) nFuture++; else nActive++;
     var g=a.grp.replace(/^\d+\./,'');
-    if(!grpMap[g])grpMap[g]={acq:0,book:0,count:0};
-    grpMap[g].acq+=c.acq; grpMap[g].book+=c.book; grpMap[g].count++;
+    if(!grpMap[g]) grpMap[g]={n:0,acq:0,book:0};
+    grpMap[g].n++; grpMap[g].acq+=c.acq; grpMap[g].book+=c.book;
   });
-  var grpRows=Object.entries(grpMap).sort(function(a,b){return b[1].acq-a[1].acq;}).map(function(e){
-    var g=e[0],v=e[1];
-    var pct=v.acq>0?(v.book/v.acq*100):0;
+
+  // Alerts: near expiry (≤90 days), no location
+  var nearExpiry=[], noLoc=[];
+  ALL.forEach(function(a){
+    var c=calc(a,now);
+    if(!c.done&&!c.future){
+      var daysLeft=(c.totalDays-c.daysUsed);
+      if(daysLeft<=90&&daysLeft>0) nearExpiry.push({a:a,d:Math.round(daysLeft)});
+    }
+    var meta=metaCache[a._docId||a.asset]||{};
+    if(!meta.loc) noLoc.push(a);
+  });
+  nearExpiry.sort(function(a,b){return a.d-b.d;});
+
+  // Donut chart data
+  var GRP_COLORS_D=['#3B82F6','#F59E0B','#10B981','#8B5CF6','#F97316','#EC4899','#6B7280','#06B6D4'];
+  var grpEntries=Object.entries(grpMap).sort(function(a,b){return b[1].acq-a[1].acq;});
+  var total=tAcq||1;
+  var r=68, cx=80, cy=80, stroke=22;
+  var offset=0, donutSegs='', legendItems='';
+  grpEntries.forEach(function(entry,i){
+    var name=entry[0], g=entry[1];
+    var pct=g.acq/total;
+    var dash=pct*2*Math.PI*r;
+    var gap=(2*Math.PI*r)-dash;
+    var color=GRP_COLORS_D[i%GRP_COLORS_D.length];
+    var shortName=name.length>14?name.slice(0,14)+'…':name;
+    donutSegs+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="'+stroke+'" stroke-dasharray="'+dash.toFixed(2)+' '+gap.toFixed(2)+'" stroke-dashoffset="'+(-offset).toFixed(2)+'"/>';
+    offset+=dash;
+    legendItems+='<div class="donut-legend-item">'
+      +'<div class="donut-dot" style="background:'+color+'"></div>'
+      +'<div class="donut-legend-name">'+shortName+'</div>'
+      +'<div class="donut-legend-val">'+fmt(g.book)+'</div>'
+      +'<div class="donut-legend-pct">'+((g.book/tBook*100)||0).toFixed(0)+'%</div>'
+      +'</div>';
+  });
+
+  // Alert items
+  var alertHtml='';
+  nearExpiry.slice(0,5).forEach(function(x){
+    alertHtml+='<div class="alert-item" onclick="openPanel("+esc(x.a._docId||x.a.asset)+")">'
+      +'<div class="alert-icon warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>'
+      +'<div class="alert-body"><div class="alert-name">'+esc(x.a.desc)+'</div>'
+      +'<div class="alert-desc">เหลือ '+x.d+' วัน · '+esc(x.a.asset)+'</div></div>'
+      +'</div>';
+  });
+  noLoc.slice(0,5).forEach(function(a){
+    alertHtml+='<div class="alert-item" onclick="openPanel("+esc(a._docId||a.asset)+")">'
+      +'<div class="alert-icon gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>'
+      +'<div class="alert-body"><div class="alert-name">'+esc(a.desc)+'</div>'
+      +'<div class="alert-desc">ยังไม่ระบุสถานที่ · '+esc(a.asset)+'</div></div>'
+      +'</div>';
+  });
+  if(!alertHtml) alertHtml='<div class="alert-empty">✓ ไม่มีรายการที่ต้องดูแล</div>';
+
+  // Group table rows
+  var grpRows=grpEntries.map(function(entry,i){
+    var g=entry[1]; var pct=tBook>0?(g.book/tBook*100):0;
     var barColor=pct>20?'var(--success-500)':pct>5?'var(--warning-500)':'var(--danger-500)';
-    return '<tr><td>'+esc(g)+'</td>'
-      +'<td class="r mono">'+fmt0(v.count)+'</td>'
-      +'<td class="r mono">'+fmt(v.acq)+'</td>'
-      +'<td class="r mono">'+fmt(v.book)+'</td>'
-      +'<td><div class="mbar-row"><div class="mbar"><div class="mbar-fill" style="width:'+pct+'%;background:'+barColor+'"></div></div><span class="mbar-label">'+pct.toFixed(1)+'%</span></div></td>'
+    return '<tr>'
+      +'<td style="font-weight:600">'+entry[0]+'</td>'
+      +'<td class="r mono">'+g.n+'</td>'
+      +'<td class="r mono">'+fmt(g.acq)+'</td>'
+      +'<td class="r mono">'+fmt(g.book)+'</td>'
+      +'<td><div class="mbar-row"><div class="mbar"><div class="mbar-fill" style="width:'+pct.toFixed(1)+'%;background:'+barColor+'"></div></div><span class="mbar-label">'+pct.toFixed(1)+'%</span></div></td>'
       +'</tr>';
   }).join('');
+
   document.getElementById('dash-content').innerHTML=
-    '<div class="kpi-grid">'
-    +'<div class="kpi-card primary"><div class="kpi-header"><div class="kpi-label">ทรัพย์สินทั้งหมด</div><div class="kpi-icon"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"2\" y=\"7\" width=\"20\" height=\"14\" rx=\"2\"/><path d=\"M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16\"/></svg></div></div><div class="kpi-value primary mono">'+fmt0(ALL.length)+'</div><div class="kpi-foot">รายการทั้งหมดในระบบ</div></div>'
-    +'<div class="kpi-card"><div class="kpi-header"><div class="kpi-label">มูลค่าซื้อรวม</div><div class="kpi-icon"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><line x1=\"12\" y1=\"1\" x2=\"12\" y2=\"23\"/><path d=\"M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6\"/></svg></div></div><div class="kpi-value mono">'+fmt(tAcq)+'</div><div class="kpi-foot">บาท</div></div>'
-    +'<div class="kpi-card success"><div class="kpi-header"><div class="kpi-label">มูลค่าคงเหลือ (สด)</div><div class="kpi-icon"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><polyline points=\"22 7 13.5 15.5 8.5 10.5 2 17\"/><polyline points=\"16 7 22 7 22 13\"/></svg></div></div><div class="kpi-value success mono">'+fmt(tBook)+'</div><div class="kpi-foot">บาท · คำนวณ ณ ปัจจุบัน</div></div>'
-    +'<div class="kpi-card"><div class="kpi-header"><div class="kpi-label">ค่าเสื่อมสะสมรวม</div><div class="kpi-icon"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><polyline points=\"22 17 13.5 8.5 8.5 13.5 2 7\"/><polyline points=\"16 17 22 17 22 11\"/></svg></div></div><div class="kpi-value mono">'+fmt(tDep)+'</div><div class="kpi-foot">บาท</div></div>'
-    +'</div>'
-    +'<div class="kpi-grid" style=\"grid-template-columns:repeat(3,1fr)\">'
-    +'<div class="kpi-card success"><div class="kpi-header"><div class="kpi-label">กำลังตัดค่าเสื่อม</div></div><div class="kpi-value success mono">'+nActive+'</div><div class="kpi-foot">รายการ</div></div>'
+    // KPI row
+    '<div class="dash-kpi-row">'
+    +'<div class="kpi-card primary"><div class="kpi-header"><div class="kpi-label">ทรัพย์สินทั้งหมด</div><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div></div><div class="kpi-value primary mono">'+fmt0(ALL.length)+'</div><div class="kpi-foot">รายการ</div></div>'
+    +'<div class="kpi-card success"><div class="kpi-header"><div class="kpi-label">มูลค่าคงเหลือ (สด)</div></div><div class="kpi-value success mono">'+fmt(tBook)+'</div><div class="kpi-foot">บาท</div></div>'
+    +'<div class="kpi-card"><div class="kpi-header"><div class="kpi-label">มูลค่าซื้อรวม</div></div><div class="kpi-value mono">'+fmt(tAcq)+'</div><div class="kpi-foot">บาท</div></div>'
     +'<div class="kpi-card danger"><div class="kpi-header"><div class="kpi-label">หมดอายุทางบัญชี</div></div><div class="kpi-value danger mono">'+nDone+'</div><div class="kpi-foot">รายการ</div></div>'
-    +'<div class="kpi-card warning"><div class="kpi-header"><div class="kpi-label">ยังไม่เริ่มตัด</div></div><div class="kpi-value warning mono">'+nFuture+'</div><div class="kpi-foot">รายการ</div></div>'
     +'</div>'
-    +'<div class="sec-hd"><span class="sec-label">มูลค่าแยกตามกลุ่มทรัพย์สิน</span></div>'
-    +'<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr><th>กลุ่มทรัพย์สิน</th><th class=\"r\">จำนวน</th><th class=\"r\">ต้นทุนรวม (บาท)</th><th class=\"r\">คงเหลือ (บาท)</th><th>% คงเหลือ</th></tr></thead><tbody>'+grpRows+'</tbody></table></div></div>';
+
+    // Chart + Alert row
+    +'<div class="dash-chart-block">'
+    +'<div class="donut-card"><div class="donut-header"><div><div class="donut-title">มูลค่าแยกตามกลุ่มทรัพย์สิน</div><div class="donut-sub">คำนวณจากมูลค่าคงเหลือปัจจุบัน</div></div></div>'
+    +'<div class="donut-body">'
+    +'<div class="donut-chart-wrap">'
+    +'<svg class="donut-svg" viewBox="0 0 160 160">'+donutSegs+'</svg>'
+    +'<div class="donut-center"><div class="donut-center-val mono">'+fmt0(ALL.length)+'</div><div class="donut-center-label">ทรัพย์สิน</div></div>'
+    +'</div>'
+    +'<div class="donut-legend">'+legendItems+'</div>'
+    +'</div></div></div>'
+
+    // Alert block
+    +'<div class="dash-alert-block">'
+    +'<div class="alert-card"><div class="alert-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>รายการที่ต้องดูแล</div>'
+    +'<div class="alert-list">'+alertHtml+'</div>'
+    +'</div></div>'
+
+    // Group table
+    +'<div class="dash-table-block"><div class="card"><div class="card-header"><span class="sec-label">มูลค่าแยกตามกลุ่ม</span></div>'
+    +'<div class="table-wrap"><table class="data-table"><thead><tr><th>กลุ่มทรัพย์สิน</th><th class="r">จำนวน</th><th class="r">ต้นทุนรวม</th><th class="r">คงเหลือ</th><th>% คงเหลือ</th></tr></thead><tbody>'+grpRows+'</tbody></table></div></div></div>';
 }
 
-// ── List & filters ────────────────────────────────────
-function applyFilters(){
-  var q=document.getElementById('fq').value.trim().toLowerCase();
-  var grp=document.getElementById('fgrp').value;
-  var stat=document.getElementById('fstat').value;
-  var now=new Date();
-  filtered=ALL.filter(function(a){
-    if(q&&!a.asset.includes(q)&&!a.desc.toLowerCase().includes(q))return false;
-    if(grp&&a.grp!==grp)return false;
-    if(stat){var c=calc(a,now);if(stat==='active'&&(c.done||c.future))return false;if(stat==='done'&&!c.done)return false;if(stat==='future'&&!c.future)return false;}
-    return true;
-  });
-  renderList();
-}
 function renderList(){
   var now=new Date();
   document.getElementById('list-count-num').textContent=filtered.length.toLocaleString();
@@ -2071,22 +2688,19 @@ function showToast(msg){
 }
 
 // ── Tab ───────────────────────────────────────────────
-function switchTab(tab,btn){
-  document.querySelectorAll('.tab-pane').forEach(function(el){el.classList.remove('active');});
-  document.querySelectorAll('.nav-btn').forEach(function(el){el.classList.remove('active');});
-  document.getElementById('tab-'+tab).classList.add('active');
-  if(btn)btn.classList.add('active');
+function switchTab(tab,el){
+  document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.sidebar-item').forEach(function(b){b.classList.remove('active');});
+  var pane=document.getElementById('tab-'+tab);
+  if(pane) pane.classList.add('active');
+  if(el) el.classList.add('active');
+  var titles={dash:'แผงควบคุม',list:'รายการทรัพย์สิน'};
+  var t=document.getElementById('main-topbar-title');
+  if(t) t.textContent=titles[tab]||'';
+  if(tab==='list') renderList();
+  closeSidebar();
 }
 
-// ── Clock ─────────────────────────────────────────────
-setInterval(function(){
-  var el=document.getElementById('top-clock');
-  if(el)el.textContent=new Date().toLocaleString('th-TH',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
-},1000);
-
-
-
-// ── Panel tab switch ──────────────────────────────────
 function switchPTab(tab, btn){
   document.querySelectorAll('.ptab-pane').forEach(function(el){el.classList.remove('active');});
   document.querySelectorAll('.ptab').forEach(function(el){el.classList.remove('active');});
@@ -2106,33 +2720,18 @@ function toggleSection(id){
 
 // ── QR Code (canvas-based, no lib needed) ─────────────
 function showQR(assetId){
+  var url=window.location.origin+window.location.pathname+'?asset='+assetId;
   document.getElementById('qr-title').textContent='Asset '+assetId;
-  document.getElementById('qr-sub').textContent='Smart Asset Tracker';
-  // Simple visual QR placeholder (real QR needs library)
-  var canvas=document.getElementById('qr-canvas');
-  var ctx=canvas.getContext('2d');
-  var url=window.location.href.split('?')[0]+'?asset='+assetId;
-  // Draw a stylized placeholder
-  ctx.clearRect(0,0,200,200);
-  ctx.fillStyle=isDark?'#161B22':'#fff';
-  ctx.fillRect(0,0,200,200);
-  // Border pattern
-  ctx.fillStyle=isDark?'#F0F6FC':'#111827';
-  // Corner squares
-  [[8,8],[140,8],[8,140]].forEach(function(p){
-    ctx.fillRect(p[0],p[1],52,52);
-    ctx.fillStyle=isDark?'#161B22':'#fff';
-    ctx.fillRect(p[0]+8,p[1]+8,36,36);
-    ctx.fillStyle=isDark?'#F0F6FC':'#111827';
-    ctx.fillRect(p[0]+16,p[1]+16,20,20);
-  });
-  // Asset number in center
-  ctx.font='bold 14px monospace';
-  ctx.textAlign='center';
-  ctx.fillText(assetId.slice(0,7), 100, 110);
-  ctx.font='10px monospace';
-  ctx.fillStyle=isDark?'#8B949E':'#6B7280';
-  ctx.fillText('SAT', 100, 126);
+  document.getElementById('qr-sub').textContent='สแกนเพื่อเปิดทรัพย์สินนี้';
+  var urlEl=document.getElementById('qr-url-text');
+  if(urlEl) urlEl.textContent=url;
+  var wrap=document.getElementById('qr-canvas-wrap');
+  wrap.innerHTML='';
+  if(typeof QRCode!=='undefined'){
+    new QRCode(wrap,{text:url,width:200,height:200,colorDark:isDark?'#F0F6FC':'#111827',colorLight:isDark?'#161B22':'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+  } else {
+    wrap.innerHTML='<p style="padding:60px 0;color:var(--ink-3);font-size:13px">กำลังโหลด...</p>';
+  }
   document.getElementById('qr-modal').classList.add('open');
 }
 function closeQR(e){
@@ -2395,6 +2994,21 @@ async function addTimelineEvent(docId){
 }
 
 
+
+// ── Sidebar ───────────────────────────────────────────
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-backdrop').classList.toggle('open');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').classList.remove('open');
+}
+function setFilterStat(val){
+  var el=document.getElementById('fstat');
+  if(el){ el.value=val; applyFilters(); }
+}
+
 // ── Phase 2 UI utilities ──────────────────────────────
 var _currentView = 'card';
 var _filtersOpen = false;
@@ -2477,7 +3091,15 @@ function showSkeleton(){
 
 
 // ── Init ──────────────────────────────────────────────
-async function init(){
+async function initApp(){
+  // Check saved session first
+  if(!checkSession()){
+    // Not logged in — show login screen, don't load data yet
+    // Login screen is already visible by default
+    // Wait for login before loading Firebase data
+    return;
+  }
+
   try{
     showSkeleton();
     var snap=await db.collection('assets').get();
@@ -2490,8 +3112,15 @@ async function init(){
     filtered=[...ALL];
     renderDash();
     renderList();
-    document.getElementById('loading').style.display='none';
+    var ldEl=document.getElementById('loading');if(ldEl)ldEl.style.display='none';
     document.getElementById('card-grid').className='asset-grid';
+    // Handle ?asset=ID URL param (from QR code scan)
+    var urlParams=new URLSearchParams(window.location.search);
+    var assetParam=urlParams.get('asset');
+    if(assetParam){
+      var found=ALL.find(function(a){return a.asset===assetParam||a._docId===assetParam;});
+      if(found) openPanel(found._docId||found.asset);
+    }
   }catch(e){
     document.getElementById('loading').innerHTML='<div style="text-align:center"><div style="font-size:40px;margin-bottom:12px">⚠️</div><div style="color:var(--danger-500);font-size:15px;font-weight:600">เชื่อมต่อ Firestore ไม่ได้<br><small style=\'color:var(--ink-3);font-weight:400\'>'+e.message+'</small></div></div>';
   }
