@@ -1890,6 +1890,163 @@ input, textarea, select { font-family: var(--font-thai); }
 .sidebar-logout-btn:hover { background: rgba(239,68,68,.2); }
 .sidebar-logout-btn svg { width: 15px; height: 15px; }
 
+
+/* ═══════════════════════════════════════════════════
+   MOBILE LANDING PAGE (≤768px)
+═══════════════════════════════════════════════════ */
+#mobile-landing { display: none; }
+
+@media (max-width: 768px) {
+  /* Hide desktop chrome on mobile landing */
+  body.mobile-home .sidebar,
+  body.mobile-home .sidebar-toggle,
+  body.mobile-home .main-area { display: none !important; }
+  body.mobile-home #mobile-landing { display: block; }
+
+  #mobile-landing {
+    min-height: 100vh;
+    background: var(--bg);
+    padding-bottom: 76px;
+  }
+
+  /* Mobile header */
+  .mob-header {
+    background: linear-gradient(135deg, #2563EB, #1E40AF);
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 20;
+  }
+  .mob-header-avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(255,255,255,.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .mob-header-title { flex: 1; font-size: 18px; font-weight: 700; color: #fff; }
+  .mob-header-btn {
+    width: 38px; height: 38px; border: none; background: rgba(255,255,255,.15);
+    border-radius: 10px; color: #fff; display: flex; align-items: center;
+    justify-content: center; cursor: pointer; position: relative;
+  }
+  .mob-header-btn svg { width: 19px; height: 19px; }
+  .mob-header-btn .dot-badge {
+    position: absolute; top: -3px; right: -3px;
+    min-width: 17px; height: 17px; padding: 0 4px;
+    background: #EF4444; border-radius: 9px;
+    font-size: 10px; font-weight: 700; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid #2563EB;
+  }
+
+  /* User card */
+  .mob-user-card {
+    margin: 16px;
+    background: linear-gradient(135deg, #3B82F6, #2563EB);
+    border-radius: 16px; padding: 20px;
+    display: flex; align-items: center; gap: 16px;
+    box-shadow: 0 4px 16px rgba(37,99,235,.3);
+  }
+  .mob-user-avatar {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: rgba(255,255,255,.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .mob-user-name { font-size: 19px; font-weight: 700; color: #fff; }
+  .mob-user-role { font-size: 13px; color: rgba(255,255,255,.8); margin-top: 2px; }
+
+  /* Section label */
+  .mob-section-label {
+    font-size: 15px; font-weight: 700; color: var(--ink);
+    padding: 8px 16px; margin-top: 8px;
+  }
+
+  /* Stat grid */
+  .mob-stat-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px; padding: 0 16px;
+  }
+  .mob-stat-card {
+    background: var(--surface-0);
+    border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px 8px;
+    text-align: center; cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    transition: transform .15s;
+  }
+  .mob-stat-card:active { transform: scale(.96); }
+  .mob-stat-num {
+    font-family: var(--font-mono); font-size: 28px; font-weight: 700;
+    line-height: 1; margin-bottom: 6px;
+  }
+  .mob-stat-label { font-size: 12px; color: var(--ink-3); font-weight: 500; }
+
+  /* Menu grid */
+  .mob-menu-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px; padding: 0 16px;
+  }
+  .mob-menu-card {
+    background: var(--surface-0);
+    border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px 8px;
+    text-align: center; cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    transition: transform .15s;
+    position: relative;
+  }
+  .mob-menu-card:active { transform: scale(.96); }
+  .mob-menu-icon {
+    width: 44px; height: 44px; margin: 0 auto 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mob-menu-icon svg { width: 26px; height: 26px; }
+  .mob-menu-label { font-size: 12.5px; color: var(--ink-2); font-weight: 600; line-height: 1.3; }
+  .mob-menu-badge {
+    position: absolute; top: 8px; right: 14px;
+    min-width: 18px; height: 18px; padding: 0 5px;
+    background: #EF4444; border-radius: 9px;
+    font-size: 10px; font-weight: 700; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Bottom nav */
+  .mob-bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
+    background: var(--surface-0);
+    border-top: 1px solid var(--border);
+    display: flex; padding: 8px 4px;
+    box-shadow: 0 -2px 12px rgba(0,0,0,.06);
+  }
+  .mob-nav-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 3px; padding: 4px;
+    border: none; background: none; cursor: pointer;
+    color: var(--ink-4); font-family: var(--font-thai);
+  }
+  .mob-nav-item.active { color: var(--primary-500); }
+  .mob-nav-item svg { width: 22px; height: 22px; }
+  .mob-nav-label { font-size: 10.5px; font-weight: 600; }
+}
+
+/* Dark mode mobile */
+[data-theme="dark"] .mob-stat-card,
+[data-theme="dark"] .mob-menu-card { background: var(--surface-1); }
+
+
+@media (max-width: 768px) {
+  .mob-back-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border: none;
+    background: var(--surface-1); border-radius: 9px;
+    color: var(--ink-2); cursor: pointer; margin-right: 8px;
+  }
+  .mob-back-btn svg { width: 18px; height: 18px; }
+}
+@media (min-width: 769px) {
+  .mob-back-btn { display: none !important; }
+}
+
 </style>
 </head>
 <body>
@@ -1940,6 +2097,85 @@ input, textarea, select { font-family: var(--font-thai); }
       <button class="btn btn-ghost" onclick="closeLogout()">ยกเลิก</button>
       <button class="btn btn-primary" onclick="confirmLogout()">ออกจากระบบ</button>
     </div>
+  </div>
+</div>
+
+<!-- MOBILE LANDING PAGE -->
+<div id="mobile-landing">
+  <!-- Header -->
+  <div class="mob-header">
+    <div class="mob-header-avatar" id="mob-avatar">A</div>
+    <div class="mob-header-title">หน้าหลัก</div>
+    <button class="mob-header-btn" onclick="toggleTheme()" title="ธีม"><span id="mob-theme-icon">🌙</span></button>
+    <button class="mob-header-btn" onclick="showLogout()" title="ออกจากระบบ">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </div>
+
+  <!-- User card -->
+  <div class="mob-user-card">
+    <div class="mob-user-avatar" id="mob-user-avatar">A</div>
+    <div>
+      <div class="mob-user-name" id="mob-user-name">ผู้ดูแลระบบ</div>
+      <div class="mob-user-role" id="mob-user-role">สิทธิ์: Admin</div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="mob-section-label">สรุปสถานะทรัพย์สิน</div>
+  <div class="mob-stat-grid" id="mob-stats"></div>
+
+  <!-- Menu -->
+  <div class="mob-section-label">เมนู</div>
+  <div class="mob-menu-grid">
+    <div class="mob-menu-card" onclick="mobGoList('')">
+      <div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
+      <div class="mob-menu-label">ค้นหาทรัพย์สิน</div>
+    </div>
+    <div class="mob-menu-card" onclick="mobGoList('')">
+      <div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></div>
+      <div class="mob-menu-label">รายการทั้งหมด</div>
+    </div>
+    <div class="mob-menu-card" onclick="mobScanQR()">
+      <div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h.01M14 17h3M17 14v3"/></svg></div>
+      <div class="mob-menu-label">สแกน QR</div>
+    </div>
+    <div class="mob-menu-card" onclick="mobGoList('active')">
+      <div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div>
+      <div class="mob-menu-label">กำลังตัดค่าเสื่อม</div>
+    </div>
+    <div class="mob-menu-card" onclick="mobGoList('done')">
+      <div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
+      <div class="mob-menu-label">หมดอายุบัญชี</div>
+    </div>
+    <div class="mob-menu-card" onclick="mobExport()">
+      <div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      <div class="mob-menu-label">Export Excel</div>
+    </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <div class="mob-bottom-nav">
+    <button class="mob-nav-item active" onclick="mobHome()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span class="mob-nav-label">หน้าหลัก</span>
+    </button>
+    <button class="mob-nav-item" onclick="mobGoList('')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+      <span class="mob-nav-label">รายการ</span>
+    </button>
+    <button class="mob-nav-item" onclick="mobScanQR()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+      <span class="mob-nav-label">สแกน QR</span>
+    </button>
+    <button class="mob-nav-item" onclick="mobExport()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span class="mob-nav-label">Export</span>
+    </button>
+    <button class="mob-nav-item" onclick="showLogout()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span class="mob-nav-label">บัญชี</span>
+    </button>
   </div>
 </div>
 
@@ -2073,6 +2309,9 @@ input, textarea, select { font-family: var(--font-thai); }
 <div class="main-area">
   <!-- Top bar -->
   <div class="main-topbar">
+    <button class="mob-back-btn" onclick="mobHome()" title="กลับหน้าหลัก">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
     <div class="main-topbar-title" id="main-topbar-title">แผงควบคุม</div>
     <div class="live-pill"><div class="live-dot"></div>LIVE</div>
     <div class="top-clock mono" id="top-clock"></div>
@@ -2292,6 +2531,10 @@ function showApp(user){
   // Hide loading div immediately (will show skeleton instead)
   var ldEl=document.getElementById('loading');
   if(ldEl){ldEl.style.display='none';}
+  // On mobile, show landing page
+  if(window.matchMedia('(max-width: 768px)').matches){
+    document.body.classList.add('mobile-home');
+  }
   // Load data if not loaded yet
   if(!ALL.length) initApp();
   // Update user chip
@@ -2352,7 +2595,7 @@ function applyTheme(){
   document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   document.getElementById('theme-btn').textContent = isDark ? '☀️' : '🌙';
 }
-function toggleTheme(){ isDark=!isDark; localStorage.setItem('theme',isDark?'dark':'light'); applyTheme(); }
+function toggleTheme(){ isDark=!isDark; localStorage.setItem('theme',isDark?'dark':'light'); applyTheme(); var ti=document.getElementById('mob-theme-icon'); if(ti)ti.textContent=isDark?'☀️':'🌙'; }
 applyTheme();
 
 // ── Depreciation ──────────────────────────────────────
@@ -3097,6 +3340,79 @@ async function addTimelineEvent(docId){
 
 
 
+
+// ── Mobile Landing ────────────────────────────────────
+var _isMobile = window.matchMedia('(max-width: 768px)').matches;
+
+function renderMobileLanding(){
+  if(!_isMobile) return;
+  var now=new Date();
+  var nAll=ALL.length, nActive=0, nDone=0, nFuture=0, nNearExp=0, noPhoto=0, noLoc=0;
+  ALL.forEach(function(a){
+    var c=calc(a,now);
+    if(c.done) nDone++; else if(c.future) nFuture++; else {
+      nActive++;
+      var dleft=c.totalDays-c.daysUsed;
+      if(dleft<=90&&dleft>0) nNearExp++;
+    }
+    var meta=metaCache[a._docId||a.asset]||{};
+    if(!meta.loc) noLoc++;
+  });
+
+  var stats=[
+    {num:nAll, label:'ทั้งหมด', color:'#2563EB', filter:''},
+    {num:nActive, label:'กำลังตัด', color:'#059669', filter:'active'},
+    {num:nDone, label:'หมดอายุ', color:'#DC2626', filter:'done'},
+    {num:nNearExp, label:'ใกล้หมดอายุ', color:'#D97706', filter:'active'},
+    {num:nFuture, label:'ยังไม่เริ่ม', color:'#7C3AED', filter:'future'},
+    {num:noLoc, label:'ไม่มีสถานที่', color:'#6B7280', filter:''}
+  ];
+
+  var html=stats.map(function(s){
+    return '<div class="mob-stat-card" onclick="mobGoList(\''+s.filter+'\')">'
+      +'<div class="mob-stat-num" style="color:'+s.color+'">'+fmt0(s.num)+'</div>'
+      +'<div class="mob-stat-label">'+s.label+'</div>'
+      +'</div>';
+  }).join('');
+  var el=document.getElementById('mob-stats');
+  if(el) el.innerHTML=html;
+
+  // Update user info
+  if(_currentUser){
+    var initial=(_currentUser.name||_currentUser.username||'A').charAt(0).toUpperCase();
+    var av=document.getElementById('mob-avatar'); if(av)av.textContent=initial;
+    var uav=document.getElementById('mob-user-avatar'); if(uav)uav.textContent=initial;
+    var un=document.getElementById('mob-user-name'); if(un)un.textContent=_currentUser.name||_currentUser.username;
+    var ur=document.getElementById('mob-user-role'); if(ur)ur.textContent='สิทธิ์: '+(_currentUser.username==='admin'?'Admin':'User');
+  }
+  // Theme icon
+  var ti=document.getElementById('mob-theme-icon'); if(ti)ti.textContent=isDark?'☀️':'🌙';
+}
+
+function mobHome(){
+  document.body.classList.add('mobile-home');
+  document.querySelectorAll('.mob-nav-item').forEach(function(b){b.classList.remove('active');});
+  var first=document.querySelector('.mob-nav-item');
+  if(first)first.classList.add('active');
+  renderMobileLanding();
+}
+
+function mobGoList(filterVal){
+  // Switch to desktop list view (works on mobile too since it's responsive)
+  document.body.classList.remove('mobile-home');
+  switchTab('list', document.getElementById('snav-list'));
+  if(filterVal){ setFilterStat(filterVal); }
+  else { var fs=document.getElementById('fstat'); if(fs){fs.value='';applyFilters();} }
+}
+
+function mobExport(){ exportExcel(); }
+
+function mobScanQR(){
+  // Show a message - QR scanning requires camera access
+  alert('สแกน QR: ใช้กล้องมือถือสแกน QR ที่ติดบนทรัพย์สิน\nระบบจะเปิดข้อมูลทรัพย์สินนั้นอัตโนมัติ');
+}
+
+
 // ── Sidebar ───────────────────────────────────────────
 function toggleSidebar(){
   document.getElementById('sidebar').classList.toggle('open');
@@ -3214,6 +3530,7 @@ async function initApp(){
     }catch(e){console.warn('metaCache load failed:',e);}
     renderDash();
     renderList();
+    renderMobileLanding();
     var ldEl=document.getElementById('loading');
     if(ldEl){ldEl.style.display='none';ldEl.style.visibility='hidden';ldEl.style.opacity='0';ldEl.style.pointerEvents='none';}
     console.log('initApp: loading hidden, showing app');
