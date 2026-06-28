@@ -725,11 +725,7 @@ input, textarea, select { font-family: var(--font-thai); }
 .save-confirm.show { opacity: 1; }
 
 /* ── LOADING ──────────────────────────────────────────── */
-#loading {
-  position: fixed; inset: 0; background: var(--bg);
-  z-index: 999; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: var(--sp-4);
-}
+/* loading inline only */
 .spinner {
   width: 40px; height: 40px;
   border: 3px solid var(--border);
@@ -2206,9 +2202,12 @@ function showLoginError(msg){
 }
 
 function showApp(user){
-  // Hide login, show app
+  // Hide login screen
   var ls=document.getElementById('login-screen');
   if(ls){ls.classList.add('hidden');ls.style.display='none';}
+  // Hide loading div immediately (will show skeleton instead)
+  var ldEl=document.getElementById('loading');
+  if(ldEl){ldEl.style.display='none';}
   // Load data if not loaded yet
   if(!ALL.length) initApp();
   // Update user chip
@@ -3159,7 +3158,9 @@ async function initApp(){
     filtered=[...ALL];
     renderDash();
     renderList();
-    var ldEl=document.getElementById('loading');if(ldEl){ldEl.style.display='none';ldEl.style.visibility='hidden';}
+    var ldEl=document.getElementById('loading');
+    if(ldEl){ldEl.style.display='none';ldEl.style.visibility='hidden';ldEl.style.opacity='0';ldEl.style.pointerEvents='none';}
+    console.log('initApp: loading hidden, showing app');
     document.getElementById('card-grid').className='asset-grid';
     // Handle ?asset=ID URL param (from QR code scan)
     var urlParams=new URLSearchParams(window.location.search);
