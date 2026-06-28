@@ -1805,6 +1805,79 @@ input, textarea, select { font-family: var(--font-thai); }
   background: transparent;
   min-height: 200px;
 }
+
+/* Dashboard simple 2-column layout */
+.dash-kpi-row {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 16px; margin-bottom: 16px;
+}
+.dash-2col {
+  display: grid; grid-template-columns: 1fr 340px;
+  gap: 16px; margin-bottom: 16px;
+}
+@media (max-width: 1000px) {
+  .dash-kpi-row { grid-template-columns: 1fr 1fr; }
+  .dash-2col { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .dash-kpi-row { grid-template-columns: 1fr 1fr; }
+}
+
+
+/* ═══ LIGHT MODE READABILITY FIXES ═══ */
+[data-theme="light"] .main-topbar { background:#FFFFFF; border-bottom:1px solid #E5E7EB; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+[data-theme="light"] .main-topbar-title { color:#111827; }
+[data-theme="light"] .top-clock { color:#6B7280; }
+[data-theme="light"] .icon-btn { background:#F3F4F6; border-color:#E5E7EB; color:#374151; }
+[data-theme="light"] .live-pill { background:rgba(5,150,105,.1); border-color:rgba(5,150,105,.25); color:#059669; }
+[data-theme="light"] .user-chip { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.1); }
+[data-theme="light"] .user-chip-name { color:#374151; }
+
+[data-theme="light"] .donut-card,
+[data-theme="light"] .alert-card,
+[data-theme="light"] .kpi-card,
+[data-theme="light"] .card { background:#FFFFFF; border-color:#E5E7EB; }
+[data-theme="light"] .donut-title { color:#111827; }
+[data-theme="light"] .donut-sub { color:#6B7280; }
+[data-theme="light"] .donut-center-val { color:#111827; }
+[data-theme="light"] .donut-center-label { color:#6B7280; }
+[data-theme="light"] .donut-legend-name { color:#374151; }
+[data-theme="light"] .donut-legend-val { color:#4B5563; }
+[data-theme="light"] .donut-legend-pct { color:#9CA3AF; }
+[data-theme="light"] .alert-card-title { color:#111827; }
+[data-theme="light"] .alert-item { background:#F9FAFB; border-color:#E5E7EB; }
+[data-theme="light"] .alert-name { color:#111827; }
+[data-theme="light"] .alert-desc { color:#6B7280; }
+[data-theme="light"] .kpi-label { color:#6B7280; }
+[data-theme="light"] .kpi-foot { color:#9CA3AF; }
+[data-theme="light"] .kpi-value { color:#111827; }
+[data-theme="light"] .page-hd-title { color:#111827; }
+[data-theme="light"] .page-hd-sub { color:#6B7280; }
+[data-theme="light"] .sec-label { color:#6B7280; }
+[data-theme="light"] .data-table th { color:#6B7280; }
+[data-theme="light"] .data-table td { color:#374151; }
+[data-theme="light"] .card-header { background:#F9FAFB; }
+
+/* Asset cards light */
+[data-theme="light"] .asset-card { background:#FFFFFF; border-color:#E5E7EB; }
+[data-theme="light"] .card-name { color:#111827; }
+[data-theme="light"] .card-group-tag { color:#6B7280; }
+[data-theme="light"] .card-info-row { color:#6B7280; }
+[data-theme="light"] .card-info-val { color:#374151; }
+[data-theme="light"] .card-footer { background:#F9FAFB; }
+[data-theme="light"] .book-val-num { color:#111827; }
+[data-theme="light"] .search-field-lg { background:#FFFFFF; }
+[data-theme="light"] .search-field-lg input { color:#111827; }
+[data-theme="light"] .filter-select { background:#FFFFFF; color:#111827; }
+
+/* Panel light */
+[data-theme="light"] #panel { background:#FFFFFF; }
+[data-theme="light"] .panel-tabs { background:#F9FAFB; }
+[data-theme="light"] .ap-section-title { color:#111827; }
+[data-theme="light"] .info-table .iv { color:#374151; }
+[data-theme="light"] .stat-v { color:#111827; }
+[data-theme="light"] .form-input,[data-theme="light"] .form-textarea { background:#F9FAFB; color:#111827; border-color:#D1D5DB; }
+
 </style>
 </head>
 <body>
@@ -2303,7 +2376,7 @@ function renderDash(){
     grpMap[g].n++; grpMap[g].acq+=c.acq; grpMap[g].book+=c.book;
   });
 
-  // Alerts: near expiry (≤90 days), no location
+  // Alerts
   var nearExpiry=[], noLoc=[];
   ALL.forEach(function(a){
     var c=calc(a,now);
@@ -2316,90 +2389,56 @@ function renderDash(){
   });
   nearExpiry.sort(function(a,b){return a.d-b.d;});
 
-  // Donut chart data
-  var GRP_COLORS_D=['#3B82F6','#F59E0B','#10B981','#8B5CF6','#F97316','#EC4899','#6B7280','#06B6D4'];
-  var grpEntries=Object.entries(grpMap).sort(function(a,b){return b[1].acq-a[1].acq;});
-  var total=tAcq||1;
-  var r=68, cx=80, cy=80, stroke=22;
-  var offset=0, donutSegs='', legendItems='';
+  // Donut data
+  var DCOL=['#3B82F6','#F59E0B','#10B981','#8B5CF6','#F97316','#EC4899','#6B7280','#06B6D4'];
+  var grpEntries=Object.keys(grpMap).map(function(k){return [k,grpMap[k]];}).sort(function(a,b){return b[1].book-a[1].book;});
+  var totalBook=tBook||1;
+  var r=68,cx=80,cy=80,stroke=22,circ=2*Math.PI*r;
+  var offset=0,donutSegs='',legendItems='';
   grpEntries.forEach(function(entry,i){
-    var name=entry[0], g=entry[1];
-    var pct=g.acq/total;
-    var dash=pct*2*Math.PI*r;
-    var gap=(2*Math.PI*r)-dash;
-    var color=GRP_COLORS_D[i%GRP_COLORS_D.length];
-    var shortName=name.length>14?name.slice(0,14)+'…':name;
-    donutSegs+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="'+stroke+'" stroke-dasharray="'+dash.toFixed(2)+' '+gap.toFixed(2)+'" stroke-dashoffset="'+(-offset).toFixed(2)+'"/>';
+    var name=entry[0],g=entry[1];
+    var pct=g.book/totalBook;
+    var dash=pct*circ;
+    var color=DCOL[i%DCOL.length];
+    var shortName=name.length>16?name.slice(0,16)+'…':name;
+    donutSegs+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="'+stroke+'" stroke-dasharray="'+dash.toFixed(2)+' '+(circ-dash).toFixed(2)+'" stroke-dashoffset="'+(-offset).toFixed(2)+'"></circle>';
     offset+=dash;
-    legendItems+='<div class="donut-legend-item">'
-      +'<div class="donut-dot" style="background:'+color+'"></div>'
-      +'<div class="donut-legend-name">'+shortName+'</div>'
-      +'<div class="donut-legend-val">'+fmt(g.book)+'</div>'
-      +'<div class="donut-legend-pct">'+((g.book/tBook*100)||0).toFixed(0)+'%</div>'
-      +'</div>';
+    legendItems+='<div class="donut-legend-item"><div class="donut-dot" style="background:'+color+'"></div><div class="donut-legend-name">'+shortName+'</div><div class="donut-legend-val">'+fmt(g.book)+'</div><div class="donut-legend-pct">'+(pct*100).toFixed(0)+'%</div></div>';
   });
 
-  // Alert items
   var alertHtml='';
-  nearExpiry.slice(0,5).forEach(function(x){
-    alertHtml+='<div class="alert-item" onclick="openPanel("+esc(x.a._docId||x.a.asset)+")">'
-      +'<div class="alert-icon warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>'
-      +'<div class="alert-body"><div class="alert-name">'+esc(x.a.desc)+'</div>'
-      +'<div class="alert-desc">เหลือ '+x.d+' วัน · '+esc(x.a.asset)+'</div></div>'
-      +'</div>';
+  nearExpiry.slice(0,4).forEach(function(x){
+    alertHtml+='<div class="alert-item" onclick="openPanel(\''+(x.a._docId||x.a.asset)+'\')"><div class="alert-icon warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div><div class="alert-body"><div class="alert-name">'+esc(x.a.desc)+'</div><div class="alert-desc">เหลือ '+x.d+' วัน · '+esc(x.a.asset)+'</div></div></div>';
   });
-  noLoc.slice(0,5).forEach(function(a){
-    alertHtml+='<div class="alert-item" onclick="openPanel("+esc(a._docId||a.asset)+")">'
-      +'<div class="alert-icon gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>'
-      +'<div class="alert-body"><div class="alert-name">'+esc(a.desc)+'</div>'
-      +'<div class="alert-desc">ยังไม่ระบุสถานที่ · '+esc(a.asset)+'</div></div>'
-      +'</div>';
+  noLoc.slice(0,4).forEach(function(a){
+    alertHtml+='<div class="alert-item" onclick="openPanel(\''+(a._docId||a.asset)+'\')"><div class="alert-icon gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div><div class="alert-body"><div class="alert-name">'+esc(a.desc)+'</div><div class="alert-desc">ยังไม่ระบุสถานที่ · '+esc(a.asset)+'</div></div></div>';
   });
   if(!alertHtml) alertHtml='<div class="alert-empty">✓ ไม่มีรายการที่ต้องดูแล</div>';
 
-  // Group table rows
-  var grpRows=grpEntries.map(function(entry,i){
+  var grpRows=grpEntries.map(function(entry){
     var g=entry[1]; var pct=tBook>0?(g.book/tBook*100):0;
-    var barColor=pct>20?'var(--success-500)':pct>5?'var(--warning-500)':'var(--danger-500)';
-    return '<tr>'
-      +'<td style="font-weight:600">'+entry[0]+'</td>'
-      +'<td class="r mono">'+g.n+'</td>'
-      +'<td class="r mono">'+fmt(g.acq)+'</td>'
-      +'<td class="r mono">'+fmt(g.book)+'</td>'
-      +'<td><div class="mbar-row"><div class="mbar"><div class="mbar-fill" style="width:'+pct.toFixed(1)+'%;background:'+barColor+'"></div></div><span class="mbar-label">'+pct.toFixed(1)+'%</span></div></td>'
-      +'</tr>';
+    var bc=pct>20?'#059669':pct>5?'#D97706':'#DC2626';
+    return '<tr><td style="font-weight:600">'+entry[0]+'</td><td class="r mono">'+g.n+'</td><td class="r mono">'+fmt(g.acq)+'</td><td class="r mono">'+fmt(g.book)+'</td><td><div class="mbar-row"><div class="mbar"><div class="mbar-fill" style="width:'+pct.toFixed(1)+'%;background:'+bc+'"></div></div><span class="mbar-label">'+pct.toFixed(1)+'%</span></div></td></tr>';
   }).join('');
 
-  document.getElementById('dash-content').innerHTML=
-    '<div class="dash-grid">'
-    // KPI row
+  var html=''
     +'<div class="dash-kpi-row">'
-    +'<div class="kpi-card primary"><div class="kpi-header"><div class="kpi-label">ทรัพย์สินทั้งหมด</div><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div></div><div class="kpi-value primary mono">'+fmt0(ALL.length)+'</div><div class="kpi-foot">รายการ</div></div>'
-    +'<div class="kpi-card success"><div class="kpi-header"><div class="kpi-label">มูลค่าคงเหลือ (สด)</div></div><div class="kpi-value success mono">'+fmt(tBook)+'</div><div class="kpi-foot">บาท</div></div>'
-    +'<div class="kpi-card"><div class="kpi-header"><div class="kpi-label">มูลค่าซื้อรวม</div></div><div class="kpi-value mono">'+fmt(tAcq)+'</div><div class="kpi-foot">บาท</div></div>'
-    +'<div class="kpi-card danger"><div class="kpi-header"><div class="kpi-label">หมดอายุทางบัญชี</div></div><div class="kpi-value danger mono">'+nDone+'</div><div class="kpi-foot">รายการ</div></div>'
+      +'<div class="kpi-card primary"><div class="kpi-header"><div class="kpi-label">ทรัพย์สินทั้งหมด</div></div><div class="kpi-value primary mono">'+fmt0(ALL.length)+'</div><div class="kpi-foot">รายการ</div></div>'
+      +'<div class="kpi-card success"><div class="kpi-header"><div class="kpi-label">มูลค่าคงเหลือ (สด)</div></div><div class="kpi-value success mono">'+fmt(tBook)+'</div><div class="kpi-foot">บาท</div></div>'
+      +'<div class="kpi-card"><div class="kpi-header"><div class="kpi-label">มูลค่าซื้อรวม</div></div><div class="kpi-value mono">'+fmt(tAcq)+'</div><div class="kpi-foot">บาท</div></div>'
+      +'<div class="kpi-card danger"><div class="kpi-header"><div class="kpi-label">หมดอายุทางบัญชี</div></div><div class="kpi-value danger mono">'+nDone+'</div><div class="kpi-foot">รายการ</div></div>'
     +'</div>'
-
-    // Chart + Alert row
-    +'<div class="dash-chart-block">'
-    +'<div class="donut-card"><div class="donut-header"><div><div class="donut-title">มูลค่าแยกตามกลุ่มทรัพย์สิน</div><div class="donut-sub">คำนวณจากมูลค่าคงเหลือปัจจุบัน</div></div></div>'
-    +'<div class="donut-body">'
-    +'<div class="donut-chart-wrap">'
-    +'<svg class="donut-svg" viewBox="0 0 160 160">'+donutSegs+'</svg>'
-    +'<div class="donut-center"><div class="donut-center-val mono">'+fmt0(ALL.length)+'</div><div class="donut-center-label">ทรัพย์สิน</div></div>'
+    +'<div class="dash-2col">'
+      +'<div class="donut-card"><div class="donut-header"><div><div class="donut-title">มูลค่าแยกตามกลุ่มทรัพย์สิน</div><div class="donut-sub">คำนวณจากมูลค่าคงเหลือปัจจุบัน</div></div></div>'
+        +'<div class="donut-body"><div class="donut-chart-wrap"><svg class="donut-svg" viewBox="0 0 160 160">'+donutSegs+'</svg><div class="donut-center"><div class="donut-center-val mono">'+fmt0(ALL.length)+'</div><div class="donut-center-label">ทรัพย์สิน</div></div></div><div class="donut-legend">'+legendItems+'</div></div>'
+      +'</div>'
+      +'<div class="alert-card"><div class="alert-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>รายการที่ต้องดูแล</div><div class="alert-list">'+alertHtml+'</div></div>'
     +'</div>'
-    +'<div class="donut-legend">'+legendItems+'</div>'
-    +'</div></div></div>'
+    +'<div class="card"><div class="card-header"><span class="sec-label">มูลค่าแยกตามกลุ่ม</span></div><div class="table-wrap"><table class="data-table"><thead><tr><th>กลุ่มทรัพย์สิน</th><th class="r">จำนวน</th><th class="r">ต้นทุนรวม</th><th class="r">คงเหลือ</th><th>% คงเหลือ</th></tr></thead><tbody>'+grpRows+'</tbody></table></div></div>';
 
-    // Alert block
-    +'<div class="dash-alert-block">'
-    +'<div class="alert-card"><div class="alert-card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>รายการที่ต้องดูแล</div>'
-    +'<div class="alert-list">'+alertHtml+'</div>'
-    +'</div></div>'
-
-    // Group table
-    +'<div class="dash-table-block"><div class="card"><div class="card-header"><span class="sec-label">มูลค่าแยกตามกลุ่ม</span></div>'
-    +'<div class="table-wrap"><table class="data-table"><thead><tr><th>กลุ่มทรัพย์สิน</th><th class="r">จำนวน</th><th class="r">ต้นทุนรวม</th><th class="r">คงเหลือ</th><th>% คงเหลือ</th></tr></thead><tbody>'+grpRows+'</tbody></table></div></div></div>';
+  var el=document.getElementById('dash-content');
+  if(el) el.innerHTML=html;
+  console.log('renderDash: done, ALL.length=', ALL.length);
 }
 
 function renderList(){
