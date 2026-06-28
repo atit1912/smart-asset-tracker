@@ -726,8 +726,7 @@ input, textarea, select { font-family: var(--font-thai); }
 
 /* ── LOADING ──────────────────────────────────────────── */
 #loading {
-  position: fixed; inset: 0; background: var(--bg);
-  z-index: 999; display: flex; flex-direction: column;
+  display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: var(--sp-4);
 }
 .spinner {
@@ -1940,10 +1939,6 @@ input, textarea, select { font-family: var(--font-thai); }
 <div id="loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px">
   <div class="spinner"></div>
   <div class="loading-label" style="margin-top:16px">กำลังโหลดข้อมูล...</div>
-</div>
-<div id="loading">
-  <div class="spinner"></div>
-  <div class="loading-label">กำลังโหลดข้อมูล...</div>
 </div>
 
 <!-- Overlay -->
