@@ -17,6 +17,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <style>
@@ -2146,6 +2147,98 @@ input, textarea, select { font-family: var(--font-thai); }
 }
 [data-theme="dark"] .account-logout-btn { background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.3); }
 
+
+/* QR Modal redesign */
+.qr-modal-brand {
+  font-size: 13px; font-weight: 800; letter-spacing: .15em;
+  text-transform: uppercase; color: var(--primary-500);
+  margin-bottom: 8px;
+}
+.qr-modal-asset-id {
+  font-family: var(--font-mono); font-size: 22px; font-weight: 700;
+  color: var(--ink); letter-spacing: .04em; margin-bottom: 4px;
+}
+.qr-modal-asset-name {
+  font-size: 14px; color: var(--ink-2); font-weight: 500;
+  line-height: 1.4; margin-bottom: 0;
+  max-width: 260px; text-align: center;
+}
+.qr-modal-card {
+  background: var(--surface-0); border-radius: 20px;
+  padding: 24px 24px 20px; max-width: 300px; width: 100%;
+  box-shadow: var(--shadow-xl); text-align: center;
+  border: 1px solid var(--border);
+}
+.qr-modal-actions {
+  display: flex; flex-direction: column; gap: 8px;
+  margin-top: 16px;
+}
+.qr-modal-actions .btn { justify-content: center; width: 100%; }
+.qr-modal-close {
+  width: 100%; padding: 11px; border: 1.5px solid var(--border);
+  border-radius: var(--r-md); background: none; font-family: var(--font-thai);
+  font-size: 14px; font-weight: 600; color: var(--ink-2); cursor: pointer;
+  transition: background .15s;
+}
+.qr-modal-close:hover { background: var(--surface-2); }
+
+
+/* QR Batch select */
+.qr-batch-bar {
+  position: sticky; top: 56px; z-index: 88;
+  background: var(--primary-600, #1D4ED8);
+  color: #fff; padding: 10px 16px;
+  display: none; align-items: center; gap: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+}
+.qr-batch-bar.show { display: flex; }
+.qr-batch-count { flex: 1; font-size: 14px; font-weight: 600; }
+.qr-batch-actions { display: flex; gap: 8px; }
+.qr-batch-btn {
+  padding: 7px 14px; border-radius: 8px; border: none;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  font-family: var(--font-thai); display: flex; align-items: center; gap: 6px;
+}
+.qr-batch-btn svg { width: 14px; height: 14px; }
+.qr-batch-btn.primary { background: #fff; color: var(--primary-600, #1D4ED8); }
+.qr-batch-btn.ghost { background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.3); }
+
+.asset-card-select {
+  position: absolute; top: 12px; left: 12px; z-index: 3;
+  width: 22px; height: 22px; border-radius: 6px;
+  border: 2px solid var(--border); background: var(--surface-0);
+  cursor: pointer; appearance: none; -webkit-appearance: none;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.asset-card-select:checked {
+  background: var(--primary-500); border-color: var(--primary-500);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 5l3.5 3.5L11 1' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: center; background-size: 10px;
+}
+body.qr-select-mode .asset-card { padding-left: 4px; }
+body.qr-select-mode .asset-card-select { display: block; }
+.asset-card-select { display: none; }
+
+/* Progress overlay */
+.qr-progress-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,.8); backdrop-filter: blur(4px);
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px;
+}
+.qr-progress-overlay.show { display: flex; }
+.qr-progress-card {
+  background: var(--surface-0); border-radius: 20px;
+  padding: 32px 40px; max-width: 380px; width: 90%;
+  text-align: center;
+}
+.qr-progress-title { font-size: 16px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+.qr-progress-sub { font-size: 13px; color: var(--ink-3); margin-bottom: 20px; }
+.qr-progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
+.qr-progress-fill { height: 100%; background: var(--primary-500); border-radius: 4px; transition: width .2s; width: 0%; }
+.qr-progress-pct { font-family: var(--font-mono); font-size: 13px; color: var(--ink-3); }
+
 </style>
 </head>
 <body>
@@ -2436,11 +2529,17 @@ input, textarea, select { font-family: var(--font-thai); }
 <!-- QR Modal -->
 <div class="qr-modal" id="qr-modal" onclick="closeQR(event)">
   <div class="qr-modal-card" onclick="event.stopPropagation()">
-    <div class="qr-modal-title" id="qr-title">QR Code</div>
-    <div class="qr-modal-sub" id="qr-sub">สแกนเพื่อเปิดหน้าทรัพย์สิน</div>
-    <div id="qr-canvas-wrap" style="margin:0 auto 16px;width:200px;height:200px"></div>
-    <div style="font-size:11px;color:var(--ink-4);word-break:break-all;margin-bottom:16px;padding:0 8px" id="qr-url-text"></div>
-    <button class="qr-modal-close" onclick="closeQR()">ปิด</button>
+    <div class="qr-modal-brand">CPF</div>
+    <div class="qr-modal-asset-id" id="qr-asset-id">—</div>
+    <div class="qr-modal-asset-name" id="qr-asset-name">—</div>
+    <div id="qr-canvas-wrap" style="margin:16px auto;width:220px;height:220px"></div>
+    <div class="qr-modal-actions">
+      <button class="btn btn-primary" onclick="downloadQR()" id="qr-download-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        บันทึกรูป QR
+      </button>
+      <button class="qr-modal-close" onclick="closeQR()">ปิด</button>
+    </div>
   </div>
 </div>
 
@@ -2541,12 +2640,43 @@ input, textarea, select { font-family: var(--font-thai); }
       </div>
     </div>
 
+    <!-- QR Batch select bar -->
+    <div class="qr-batch-bar" id="qr-batch-bar">
+      <div class="qr-batch-count" id="qr-batch-count">เลือก 0 รายการ</div>
+      <div class="qr-batch-actions">
+        <button class="qr-batch-btn ghost" onclick="qrSelectAll()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          เลือกทั้งหมด
+        </button>
+        <button class="qr-batch-btn primary" onclick="downloadQRBatch()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          ดาวน์โหลด ZIP
+        </button>
+        <button class="qr-batch-btn ghost" onclick="qrSelectCancel()">ยกเลิก</button>
+      </div>
+    </div>
+
+    <!-- Progress overlay -->
+    <div class="qr-progress-overlay" id="qr-progress-overlay">
+      <div class="qr-progress-card">
+        <div class="qr-progress-title">กำลัง Generate QR Code...</div>
+        <div class="qr-progress-sub" id="qr-progress-sub">รอสักครู่</div>
+        <div class="qr-progress-bar"><div class="qr-progress-fill" id="qr-progress-fill"></div></div>
+        <div class="qr-progress-pct" id="qr-progress-pct">0%</div>
+      </div>
+    </div>
+
     <!-- List header -->
     <div class="list-header">
       <div class="list-count">
         <span class="list-count-num" id="list-count-num">—</span>
         <span>รายการ</span>
       </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-ghost btn-sm" onclick="qrSelectMode()" title="เลือก QR หลายรายการ">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h.01M14 17h3M17 14v3"/></svg>
+          เลือก QR
+        </button>
       <div class="view-toggle">
         <button class="view-btn active" id="view-card" onclick="setView('card')" title="Card view">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -2554,6 +2684,7 @@ input, textarea, select { font-family: var(--font-thai); }
         <button class="view-btn" id="view-table" onclick="setView('table')" title="Table view">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
         </button>
+      </div>
       </div>
     </div>
 
@@ -2873,7 +3004,9 @@ function renderList(){
         :'<span class="badge badge-success"><span class="badge-dot"></span>กำลังตัด</span>';
       var bClass=c.done?'danger':c.future?'':'success';
       var delay=(i*0.025)+'s';
-      return '<div class="asset-card" onclick="openPanel(\''+esc(a._docId||a.asset)+'\')" style="animation-delay:'+delay+'">'
+      var _did=esc(a._docId||a.asset);
+      return '<div class="asset-card" style="position:relative;animation-delay:'+delay+'" onclick="if(document.body.classList.contains(\'qr-select-mode\')){var c=document.getElementById(\'chk-'+_did+'\');if(c){c.checked=!c.checked;qrToggleCard(c,\''+_did+'\')};}else{openPanel(\''+_did+'\')};">'
+        +'<input type="checkbox" class="asset-card-select" id="chk-'+_did+'" onclick="event.stopPropagation();qrToggleCard(this,\''+_did+'\')" value="'+_did+'">'
         +'<div class="card-strip" style="background:'+color+'"></div>'
         +'<div class="card-body">'
           +'<div class="card-top"><span class="card-asset-num">'+esc(a.asset)+'</span>'+badge+'</div>'
@@ -3203,20 +3336,82 @@ function toggleSection(id){
 }
 
 // ── QR Code (canvas-based, no lib needed) ─────────────
+var _qrCurrentAsset = null;
+
 function showQR(assetId){ assetId=String(assetId);
+  // Find asset data
+  var a=ALL.find(function(x){return x.asset===assetId||x._docId===assetId;});
+  _qrCurrentAsset = a || {asset:assetId, desc:'', _docId:assetId};
   var url=window.location.origin+window.location.pathname+'?asset='+assetId;
-  document.getElementById('qr-title').textContent='Asset '+assetId;
-  document.getElementById('qr-sub').textContent='สแกนเพื่อเปิดทรัพย์สินนี้';
-  var urlEl=document.getElementById('qr-url-text');
-  if(urlEl) urlEl.textContent=url;
+
+  // Update modal labels
+  var eid=document.getElementById('qr-asset-id');
+  var ename=document.getElementById('qr-asset-name');
+  if(eid) eid.textContent=assetId;
+  if(ename) ename.textContent=a?a.desc:'';
+
+  // Generate QR
   var wrap=document.getElementById('qr-canvas-wrap');
   wrap.innerHTML='';
   if(typeof QRCode!=='undefined'){
-    new QRCode(wrap,{text:url,width:200,height:200,colorDark:isDark?'#F0F6FC':'#111827',colorLight:isDark?'#161B22':'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+    new QRCode(wrap,{text:url,width:220,height:220,colorDark:'#111827',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
   } else {
     wrap.innerHTML='<p style="padding:60px 0;color:var(--ink-3);font-size:13px">กำลังโหลด...</p>';
   }
   document.getElementById('qr-modal').classList.add('open');
+}
+
+function getQRCanvas(){
+  var wrap=document.getElementById('qr-canvas-wrap');
+  if(!wrap) return null;
+  return wrap.querySelector('canvas') || wrap.querySelector('img');
+}
+
+function downloadQR(){
+  var a=_qrCurrentAsset;
+  if(!a) return;
+  var el=getQRCanvas();
+  if(!el){showToast('ยังไม่มี QR code'); return;}
+  var canvas;
+  if(el.tagName==='CANVAS'){
+    canvas=el;
+  } else {
+    // img → canvas
+    canvas=document.createElement('canvas');
+    canvas.width=el.naturalWidth||220;
+    canvas.height=el.naturalHeight||220;
+    canvas.getContext('2d').drawImage(el,0,0);
+  }
+  // Draw QR with white background + labels
+  var final=document.createElement('canvas');
+  final.width=260; final.height=320;
+  var ctx=final.getContext('2d');
+  ctx.fillStyle='#ffffff';
+  ctx.fillRect(0,0,260,320);
+  // Top label: CPF
+  ctx.fillStyle='#2563EB';
+  ctx.font='bold 14px sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText('CPF',130,22);
+  // Asset ID
+  ctx.fillStyle='#111827';
+  ctx.font='bold 13px monospace';
+  ctx.fillText(a.asset,130,40);
+  // Asset name (wrap if long)
+  ctx.font='12px sans-serif';
+  ctx.fillStyle='#374151';
+  var name=a.desc||'';
+  if(name.length>30) name=name.slice(0,29)+'…';
+  ctx.fillText(name,130,56);
+  // QR image
+  ctx.drawImage(canvas,20,64,220,220);
+  // Download
+  var link=document.createElement('a');
+  var safeName=(a.desc||a.asset).replace(/[^ก-๙a-zA-Z0-9]/g,'_').slice(0,30);
+  link.download='QR_'+a.asset+'_'+safeName+'.png';
+  link.href=final.toDataURL('image/png');
+  link.click();
+  showToast('✓ บันทึก QR_'+a.asset+'.png แล้ว');
 }
 function closeQR(e){
   if(!e||e.target===document.getElementById('qr-modal'))
@@ -3796,6 +3991,136 @@ async function initApp(){
     document.getElementById('loading').innerHTML='<div style="text-align:center"><div style="font-size:40px;margin-bottom:12px">⚠️</div><div style="color:var(--danger-500);font-size:15px;font-weight:600">เชื่อมต่อ Firestore ไม่ได้<br><small style=\'color:var(--ink-3);font-weight:400\'>'+e.message+'</small></div></div>';
   }
 }
+
+// ── QR Batch Download ─────────────────────────────
+var _qrSelected = new Set();
+var _qrSelectActive = false;
+
+function qrSelectMode(){
+  _qrSelectActive = true;
+  _qrSelected.clear();
+  document.body.classList.add('qr-select-mode');
+  document.getElementById('qr-batch-bar').classList.add('show');
+  updateBatchCount();
+  // Re-render to show checkboxes
+  renderList();
+  showToast('โหมดเลือก QR — กดการ์ดเพื่อเลือก');
+}
+
+function qrSelectCancel(){
+  _qrSelectActive = false;
+  _qrSelected.clear();
+  document.body.classList.remove('qr-select-mode');
+  document.getElementById('qr-batch-bar').classList.remove('show');
+  renderList();
+}
+
+function qrToggleCard(el, docId){
+  if(el.checked) _qrSelected.add(docId);
+  else _qrSelected.delete(docId);
+  updateBatchCount();
+}
+
+function qrSelectAll(){
+  filtered.forEach(function(a){ _qrSelected.add(a._docId||a.asset); });
+  // Check all visible checkboxes
+  document.querySelectorAll('.asset-card-select').forEach(function(c){ c.checked=true; });
+  updateBatchCount();
+}
+
+function updateBatchCount(){
+  var n=_qrSelected.size;
+  var el=document.getElementById('qr-batch-count');
+  if(el) el.textContent='เลือก '+n+' รายการ';
+}
+
+async function downloadQRBatch(){
+  if(_qrSelected.size===0){showToast('กรุณาเลือกรายการก่อน');return;}
+  if(typeof JSZip==='undefined'){showToast('โหลด JSZip ไม่สำเร็จ กรุณารีเฟรช');return;}
+  if(typeof QRCode==='undefined'){showToast('โหลด QRCode library ไม่สำเร็จ');return;}
+
+  var assets=filtered.filter(function(a){return _qrSelected.has(a._docId||a.asset);});
+  var total=assets.length;
+  var overlay=document.getElementById('qr-progress-overlay');
+  var fill=document.getElementById('qr-progress-fill');
+  var sub=document.getElementById('qr-progress-sub');
+  var pct=document.getElementById('qr-progress-pct');
+  overlay.classList.add('show');
+  var zip=new JSZip();
+  var baseUrl=window.location.origin+window.location.pathname;
+
+  for(var i=0;i<total;i++){
+    var a=assets[i];
+    var pctVal=Math.round((i+1)/total*100);
+    fill.style.width=pctVal+'%';
+    pct.textContent=pctVal+'%';
+    sub.textContent='('+(i+1)+'/'+total+') '+a.asset+' '+a.desc.slice(0,20);
+
+    // Generate QR as canvas
+    var imgData=await generateQRImage(a, baseUrl);
+    var safeName=(a.desc||a.asset).replace(/[^ก-๙a-zA-Z0-9]/g,'_').slice(0,25);
+    zip.file('QR_'+a.asset+'_'+safeName+'.png', imgData, {base64:true});
+
+    // yield to browser every 5 items
+    if(i%5===0) await new Promise(function(r){setTimeout(r,1);});
+  }
+
+  sub.textContent='กำลังบีบอัดไฟล์...';
+  var blob=await zip.generateAsync({type:'blob'});
+  overlay.classList.remove('show');
+
+  var link=document.createElement('a');
+  link.download='QR_Assets_'+total+'รายการ.zip';
+  link.href=URL.createObjectURL(blob);
+  link.click();
+  setTimeout(function(){URL.revokeObjectURL(link.href);},5000);
+  showToast('✓ ดาวน์โหลด '+total+' QR code แล้ว');
+  qrSelectCancel();
+}
+
+function generateQRImage(a, baseUrl){
+  return new Promise(function(resolve){
+    var url=baseUrl+'?asset='+a.asset;
+    var tmp=document.createElement('div');
+    tmp.style.cssText='position:absolute;left:-9999px;top:-9999px;width:220px;height:220px';
+    document.body.appendChild(tmp);
+
+    new QRCode(tmp,{text:url,width:220,height:220,colorDark:'#111827',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
+
+    setTimeout(function(){
+      var qrEl=tmp.querySelector('canvas')||tmp.querySelector('img');
+      // Draw final canvas with labels
+      var final=document.createElement('canvas');
+      final.width=260; final.height=320;
+      var ctx=final.getContext('2d');
+      ctx.fillStyle='#ffffff';
+      ctx.fillRect(0,0,260,320);
+      // CPF label
+      ctx.fillStyle='#2563EB';
+      ctx.font='bold 14px sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText('CPF',130,20);
+      // Asset ID
+      ctx.fillStyle='#111827';
+      ctx.font='bold 13px monospace';
+      ctx.fillText(a.asset,130,38);
+      // Asset name
+      ctx.font='11px sans-serif';
+      ctx.fillStyle='#374151';
+      var name=a.desc||'';
+      if(name.length>32) name=name.slice(0,31)+'…';
+      ctx.fillText(name,130,54);
+      // QR
+      if(qrEl) ctx.drawImage(qrEl,20,62,220,220);
+      // Clean up
+      document.body.removeChild(tmp);
+      // Return base64 without header
+      var dataUrl=final.toDataURL('image/png');
+      resolve(dataUrl.split(',')[1]);
+    },120);
+  });
+}
+
 // ── Entry point ──────────────────────────────────────
 function init(){
   // Check session → if logged in load data, else show login screen
