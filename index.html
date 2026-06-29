@@ -3448,18 +3448,16 @@ function generateQRHighRes(a, baseUrl){
       // White background
       ctx.fillStyle='#ffffff';
       ctx.fillRect(0,0,W,H);
-      // Top border accent
-      ctx.fillStyle='#2563EB';
-      ctx.fillRect(0,0,W,8*SCALE);
+      // No border accent
       // CPF label
       ctx.fillStyle='#2563EB';
       ctx.font='bold '+(14*SCALE)+'px Arial,sans-serif';
       ctx.textAlign='center';
-      ctx.fillText('CPF',W/2,28*SCALE);
+      ctx.fillText('CPF',W/2,22*SCALE);
       // Asset ID
       ctx.fillStyle='#111827';
       ctx.font='bold '+(13*SCALE)+'px "Courier New",monospace';
-      ctx.fillText(a.asset,W/2,46*SCALE);
+      ctx.fillText(a.asset,W/2,40*SCALE);
       // Asset name (auto-wrap)
       ctx.font=(11*SCALE)+'px Arial,sans-serif';
       ctx.fillStyle='#374151';
@@ -3479,14 +3477,12 @@ function generateQRHighRes(a, baseUrl){
         }
         ctx.fillText(line,W/2,y);
       } else {
-        ctx.fillText(name,W/2,60*SCALE);
+        ctx.fillText(name,W/2,54*SCALE);
       }
       // QR image (centered)
-      var qrX=20*SCALE, qrY=72*SCALE, qrW=220*SCALE, qrH=220*SCALE;
+      var qrX=20*SCALE, qrY=66*SCALE, qrW=220*SCALE, qrH=220*SCALE;
       if(qrEl) ctx.drawImage(qrEl,qrX,qrY,qrW,qrH);
-      // Bottom border
-      ctx.fillStyle='#2563EB';
-      ctx.fillRect(0,H-4*SCALE,W,4*SCALE);
+      // No border
       // Cleanup
       document.body.removeChild(tmp);
       resolve(final.toDataURL('image/png').split(',')[1]);
