@@ -2348,6 +2348,103 @@ body.qr-select-mode .asset-card-select { display: block; }
 }
 .qrp-btn-ghost:hover { background: var(--surface-1); }
 
+
+/* Export Modal */
+.export-modal-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center; padding: 16px;
+}
+.export-modal-overlay.open { display: flex; }
+.export-modal-card {
+  background: var(--surface-0); border-radius: 20px;
+  width: 100%; max-width: 480px;
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 48px rgba(0,0,0,.25);
+  overflow: hidden;
+}
+.export-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 20px 16px; border-bottom: 1px solid var(--border);
+}
+.export-modal-title { font-size: 17px; font-weight: 700; color: var(--ink); }
+.export-modal-close {
+  width: 32px; height: 32px; border: none; background: var(--surface-1);
+  border-radius: 8px; color: var(--ink-3); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.export-modal-close svg { width: 14px; height: 14px; }
+
+.export-section-label {
+  font-size: 11px; font-weight: 700; color: var(--ink-4);
+  text-transform: uppercase; letter-spacing: .08em;
+  padding: 16px 20px 8px;
+}
+.export-scope-row {
+  display: flex; gap: 8px; padding: 0 20px 16px;
+}
+.export-scope-btn {
+  flex: 1; display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; border-radius: 12px;
+  border: 1.5px solid var(--border); background: var(--surface-1);
+  cursor: pointer; transition: all .12s;
+}
+.export-scope-btn:has(input:checked) {
+  border-color: var(--primary-400); background: rgba(59,130,246,.06);
+}
+.export-scope-btn input { display: none; }
+.export-scope-main { font-size: 13.5px; font-weight: 600; color: var(--ink); display: block; }
+.export-scope-sub { font-size: 11px; color: var(--ink-3); display: block; margin-top: 2px; }
+
+.export-option-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 20px 14px;
+}
+.export-toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+.export-toggle input { opacity: 0; width: 0; height: 0; }
+.export-toggle-slider {
+  position: absolute; inset: 0; border-radius: 22px;
+  background: var(--border-strong); cursor: pointer; transition: .2s;
+}
+.export-toggle-slider::before {
+  content: ''; position: absolute; width: 16px; height: 16px;
+  left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .2s;
+}
+.export-toggle input:checked + .export-toggle-slider { background: var(--primary-500); }
+.export-toggle input:checked + .export-toggle-slider::before { transform: translateX(18px); }
+.export-option-main { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.export-option-sub { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+
+.export-preview-info {
+  margin: 0 20px 14px;
+  padding: 10px 14px; border-radius: 10px;
+  background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.2);
+  font-size: 13px; color: var(--primary-500); font-weight: 600;
+}
+.export-divider { height: 1px; background: var(--border); margin: 0 20px 0; }
+
+.export-btn-row { display: flex; gap: 8px; padding: 16px 20px 0; }
+.export-action-btn {
+  flex: 1; display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; border-radius: 14px; border: 1.5px solid var(--border);
+  background: var(--surface-1); cursor: pointer; text-align: left;
+  transition: all .15s; font-family: var(--font-thai);
+}
+.export-action-btn:last-child { margin-right: 0; }
+.export-action-btn:hover { border-color: var(--primary-400); background: rgba(59,130,246,.05); }
+.export-action-btn.zip {
+  width: calc(100% - 40px); margin: 0 20px;
+  background: rgba(59,130,246,.06); border-color: rgba(59,130,246,.25);
+  padding-bottom: 14px; margin-bottom: 20px;
+}
+.export-action-btn.zip:hover { background: rgba(59,130,246,.12); }
+.export-action-btn svg { width: 22px; height: 22px; color: var(--ink-3); flex-shrink: 0; }
+.export-action-btn.excel svg { color: #059669; }
+.export-action-btn.csv svg { color: #D97706; }
+.export-action-btn.zip svg { color: var(--primary-500); }
+.export-action-main { font-size: 14px; font-weight: 700; color: var(--ink); }
+.export-action-sub { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+
 </style>
 </head>
 <body>
@@ -2556,6 +2653,81 @@ body.qr-select-mode .asset-card-select { display: block; }
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div class="export-modal-overlay" id="export-modal-overlay" onclick="closeExportModal(event)">
+  <div class="export-modal-card" onclick="event.stopPropagation()">
+    <div class="export-modal-header">
+      <div class="export-modal-title">Export ข้อมูล</div>
+      <button class="export-modal-close" onclick="closeExportModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Scope selector -->
+    <div class="export-section-label">เลือกข้อมูลที่จะ export</div>
+    <div class="export-scope-row">
+      <label class="export-scope-btn">
+        <input type="radio" name="exp-scope" value="filtered" checked onchange="updateExportCount()">
+        <span class="export-scope-text">
+          <span class="export-scope-main">รายการที่กรองอยู่</span>
+          <span class="export-scope-sub" id="exp-scope-filtered-count">— รายการ</span>
+        </span>
+      </label>
+      <label class="export-scope-btn">
+        <input type="radio" name="exp-scope" value="all" onchange="updateExportCount()">
+        <span class="export-scope-text">
+          <span class="export-scope-main">ทั้งหมด</span>
+          <span class="export-scope-sub" id="exp-scope-all-count">— รายการ</span>
+        </span>
+      </label>
+    </div>
+
+    <!-- Qty expand option -->
+    <div class="export-option-row">
+      <label class="export-toggle">
+        <input type="checkbox" id="exp-expand-qty" checked>
+        <span class="export-toggle-slider"></span>
+      </label>
+      <div class="export-option-text">
+        <div class="export-option-main">แตกแถวตามปริมาณ (Qty)</div>
+        <div class="export-option-sub">asset 16 ชิ้น → 16 แถว (1/16 ... 16/16)</div>
+      </div>
+    </div>
+
+    <div class="export-preview-info" id="exp-row-info">จะได้ — แถว</div>
+
+    <!-- Divider -->
+    <div class="export-divider"></div>
+
+    <!-- 2 Action buttons -->
+    <div class="export-section-label">เลือกรูปแบบ</div>
+    <div class="export-btn-row">
+      <button class="export-action-btn excel" onclick="doExportQRTable('xlsx')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <div>
+          <div class="export-action-main">Export Excel</div>
+          <div class="export-action-sub">.xlsx — เปิดใน Excel</div>
+        </div>
+      </button>
+      <button class="export-action-btn csv" onclick="doExportQRTable('csv')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <div>
+          <div class="export-action-main">Export CSV</div>
+          <div class="export-action-sub">.csv — universal</div>
+        </div>
+      </button>
+    </div>
+    <button class="export-action-btn zip" onclick="doExportQRZip()" style="margin-top:8px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <div>
+        <div class="export-action-main">Export QR ทั้งชุด (ZIP)</div>
+        <div class="export-action-sub">รูป QR PNG ทุกใบ + Excel รวมไฟล์เดียว</div>
+      </div>
+    </button>
+
   </div>
 </div>
 <!-- Sidebar backdrop -->
@@ -4423,43 +4595,37 @@ function qrpRenderLabel(ctx, W, H, a, cur, tot, url, S, qrEl){
   var textX = 6*S;
   var textMaxW = qrLeft - textX - 6*S;
 
-  // CPF — large header
+  // ── CPF bold header ──────────────────────────────
   ctx.textAlign = 'left';
   ctx.fillStyle = '#111111';
-  ctx.font = 'bold '+(20*S)+'px Arial,sans-serif';
-  ctx.fillText('CPF', textX, 20*S);
-  // Separator
-  ctx.strokeStyle = '#dddddd'; ctx.lineWidth = 0.5*S;
-  ctx.beginPath(); ctx.moveTo(textX, 24*S); ctx.lineTo(qrLeft-4*S, 24*S); ctx.stroke();
-  // No.
-  ctx.font = 'bold '+(8*S)+'px Arial,sans-serif';
-  ctx.fillStyle = '#888888';
-  ctx.fillText('No :', textX, 34*S);
-  ctx.font = 'bold '+(11*S)+'px Arial,sans-serif';
+  ctx.font = 'bold '+(27*S)+'px Arial,sans-serif';
+  ctx.fillText('CPF', textX, 24*S);
+  // Thin separator
+  ctx.strokeStyle = '#bbbbbb'; ctx.lineWidth = 0.6*S;
+  ctx.beginPath(); ctx.moveTo(textX, 29*S); ctx.lineTo(qrLeft-5*S, 29*S); ctx.stroke();
+  // Asset number — large monospace
+  ctx.font = 'bold '+(17*S)+'px "Courier New",monospace';
   ctx.fillStyle = '#111111';
-  ctx.fillText(a.asset, textX, 46*S);
-  // Qty
-  ctx.font = 'bold '+(8*S)+'px Arial,sans-serif';
-  ctx.fillStyle = '#888888';
-  ctx.fillText('Qty :', textX, 58*S);
-  ctx.font = 'bold '+(11*S)+'px Arial,sans-serif';
-  ctx.fillStyle = '#111111';
-  ctx.fillText(cur+' / '+tot, textX, 70*S);
-  // Name
-  ctx.font = 'bold '+(8*S)+'px Arial,sans-serif';
-  ctx.fillStyle = '#888888';
-  ctx.fillText('Name :', textX, 82*S);
-  ctx.font = (8*S)+'px Arial,sans-serif';
-  ctx.fillStyle = '#111111';
+  ctx.fillText(a.asset, textX, 48*S);
+  // Qty — bold, large
+  ctx.font = 'bold '+(14*S)+'px Arial,sans-serif';
+  ctx.fillStyle = '#333333';
+  ctx.fillText(cur+' / '+tot, textX, 67*S);
+  // Name — medium, up to 2 lines
+  ctx.font = (11*S)+'px Arial,sans-serif';
+  ctx.fillStyle = '#444444';
   var name = a.desc||'';
   var l1='', l2='', chars=name.split('');
   for(var ci=0;ci<chars.length;ci++){
     if(ctx.measureText(l1+chars[ci]).width<=textMaxW) l1+=chars[ci];
     else { l2=name.slice(l1.length); break; }
   }
-  if(l2){ while(l2.length>0&&ctx.measureText(l2).width>textMaxW) l2=l2.slice(0,-1); if(l2.length<name.slice(l1.length).length) l2=l2.slice(0,-1)+'…'; }
-  ctx.fillText(l1||name, textX, 92*S);
-  if(l2) ctx.fillText(l2, textX, 102*S);
+  if(l2){
+    while(l2.length>0&&ctx.measureText(l2).width>textMaxW) l2=l2.slice(0,-1);
+    if(l2.length<name.slice(l1.length).length) l2=l2.slice(0,-1)+'…';
+  }
+  ctx.fillText(l1||name, textX, 83*S);
+  if(l2) ctx.fillText(l2, textX, 96*S);
 
   // QR
   if(qrEl){
@@ -4562,6 +4728,218 @@ function qrpUpdateWithQR(){
       qrpRenderLabel(ctx,QRPL_W,QRPL_H,_qrpAsset,1,total,url,1,qrEl);
     });
   }, 300);
+}
+
+
+
+// ── Export Modal ─────────────────────────────────────────────────
+var BASE_URL = '';
+function getBaseUrl(){
+  return window.location.origin + window.location.pathname;
+}
+
+function openExportModal(){
+  BASE_URL = getBaseUrl();
+  updateExportCount();
+  document.getElementById('export-modal-overlay').classList.add('open');
+}
+
+function closeExportModal(e){
+  if(!e || e.target===document.getElementById('export-modal-overlay'))
+    document.getElementById('export-modal-overlay').classList.remove('open');
+}
+
+function getExpScope(){
+  var sel = document.querySelector('input[name="exp-scope"]:checked');
+  return sel ? sel.value : 'filtered';
+}
+
+function getExpAssets(){
+  return getExpScope()==='all' ? ALL : (filtered.length ? filtered : ALL);
+}
+
+function updateExportCount(){
+  var fEl = document.getElementById('exp-scope-filtered-count');
+  var aEl = document.getElementById('exp-scope-all-count');
+  if(fEl) fEl.textContent = filtered.length.toLocaleString() + ' รายการ';
+  if(aEl) aEl.textContent = ALL.length.toLocaleString() + ' รายการ';
+  updateRowInfo();
+}
+
+function getExpandQty(){
+  var el = document.getElementById('exp-expand-qty');
+  return el ? el.checked : true;
+}
+
+function updateRowInfo(){
+  var assets = getExpAssets();
+  var expand = getExpandQty();
+  var rows = 0;
+  assets.forEach(function(a){
+    var qty = (QTY_MAP && QTY_MAP[a.asset]) ? Math.max(1, QTY_MAP[a.asset]) : 1;
+    rows += expand ? qty : 1;
+  });
+  var el = document.getElementById('exp-row-info');
+  if(el) el.textContent = 'จะได้ ' + rows.toLocaleString() + ' แถว' + (expand ? ' (แตกตามปริมาณ)' : ' (1 แถว/asset)');
+}
+
+// Build rows for export: Com | No | Qty | Name | QR
+function buildExportRows(){
+  var assets = getExpAssets();
+  var expand = getExpandQty();
+  var url = getBaseUrl();
+  var rows = [];
+  assets.forEach(function(a){
+    var qty = (QTY_MAP && QTY_MAP[a.asset]) ? Math.max(1, QTY_MAP[a.asset]) : 1;
+    var qrLink = url + '?asset=' + a.asset;
+    if(expand && qty > 1){
+      for(var i=1; i<=qty; i++){
+        rows.push({
+          'Com': 'CPF',
+          'No': a.asset,
+          'Qty': i + '/' + qty,
+          'Name': a.desc || '',
+          'QR': qrLink
+        });
+      }
+    } else {
+      rows.push({
+        'Com': 'CPF',
+        'No': a.asset,
+        'Qty': qty > 1 ? '1/' + qty : '1/1',
+        'Name': a.desc || '',
+        'QR': qrLink
+      });
+    }
+  });
+  return rows;
+}
+
+function doExportQRTable(format){
+  var rows = buildExportRows();
+  if(!rows.length){ showToast('ไม่มีข้อมูล'); return; }
+  var date = new Date().toISOString().slice(0,10);
+  var scope = getExpScope()==='all' ? 'ทั้งหมด' : 'กรอง';
+
+  if(format === 'xlsx'){
+    if(typeof XLSX === 'undefined'){ showToast('โหลด XLSX ไม่สำเร็จ'); return; }
+    var ws = XLSX.utils.json_to_sheet(rows);
+    // Set column widths
+    ws['!cols'] = [{wch:6},{wch:12},{wch:8},{wch:40},{wch:60}];
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'QR Assets');
+    XLSX.writeFile(wb, 'QR_Label_' + scope + '_' + date + '.xlsx');
+    showToast('✓ Export Excel ' + rows.length + ' แถว');
+  } else {
+    // CSV with BOM for Thai chars in Excel
+    var header = ['Com','No','Qty','Name','QR'];
+    var bom2=String.fromCharCode(0xFEFF);var csv=bom2+header.join(',')+'\n';
+    rows.forEach(function(r){
+      csv += [r.Com, r.No, '"'+r.Qty+'"', '"'+(r.Name||'').replace(/"/g,'""')+'"', r.QR].join(',') + '\n';
+    });
+    var blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'QR_Label_' + scope + '_' + date + '.csv';
+    link.click();
+    setTimeout(function(){ URL.revokeObjectURL(link.href); }, 3000);
+    showToast('✓ Export CSV ' + rows.length + ' แถว');
+  }
+  closeExportModal();
+}
+
+async function doExportQRZip(){
+  if(typeof JSZip === 'undefined'){ showToast('โหลด JSZip ไม่สำเร็จ'); return; }
+  if(typeof QRCode === 'undefined'){ showToast('โหลด QRCode ไม่สำเร็จ'); return; }
+  var assets = getExpAssets();
+  var expand = getExpandQty();
+  var url = getBaseUrl();
+  var date = new Date().toISOString().slice(0,10);
+  var scope = getExpScope()==='all' ? 'ทั้งหมด' : 'กรอง';
+
+  // Calculate total labels
+  var totalLabels = 0;
+  assets.forEach(function(a){
+    var qty = (QTY_MAP && QTY_MAP[a.asset]) ? Math.max(1, QTY_MAP[a.asset]) : 1;
+    totalLabels += expand ? qty : 1;
+  });
+
+  if(totalLabels > 200 && !confirm('จะ generate ' + totalLabels + ' รูป QR ใช้เวลานาน ดำเนินการต่อ?')) return;
+
+  closeExportModal();
+  var overlay = document.getElementById('qr-progress-overlay');
+  var fill    = document.getElementById('qr-progress-fill');
+  var sub     = document.getElementById('qr-progress-sub');
+  var pct     = document.getElementById('qr-progress-pct');
+  overlay.classList.add('show');
+
+  var zip = new JSZip();
+  var done = 0;
+
+  for(var ai=0; ai<assets.length; ai++){
+    var a = assets[ai];
+    var qty = (QTY_MAP && QTY_MAP[a.asset]) ? Math.max(1, QTY_MAP[a.asset]) : 1;
+    var labelCount = expand ? qty : 1;
+    for(var li=1; li<=labelCount; li++){
+      var cur = li, tot = expand ? qty : 1;
+      done++;
+      var p = Math.round(done / totalLabels * 100);
+      fill.style.width = p + '%';
+      pct.textContent = p + '%';
+      sub.textContent = '(' + done + '/' + totalLabels + ') ' + a.asset + (labelCount>1 ? ' ['+cur+'/'+tot+']' : '');
+
+      // Generate high-res label PNG using existing qrpRenderLabel
+      var imgData = await generateLabelPNG(a, cur, tot, url);
+      var safeName = (a.desc||a.asset).replace(/[^ก-๙a-zA-Z0-9]/g,'_').slice(0,20);
+      var fname = 'QR_' + a.asset + (labelCount>1 ? '_'+cur+'of'+tot : '') + '_' + safeName + '.png';
+      zip.file('QR_labels/' + fname, imgData, {base64:true});
+      if(done % 5 === 0) await new Promise(function(r){setTimeout(r,1);});
+    }
+  }
+
+  // Add Excel to ZIP
+  sub.textContent = 'เพิ่ม Excel...';
+  var rows = buildExportRows();
+  if(typeof XLSX !== 'undefined'){
+    var ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{wch:6},{wch:12},{wch:8},{wch:40},{wch:60}];
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'QR Assets');
+    var xlsxBin = XLSX.write(wb, {type:'base64', bookType:'xlsx'});
+    zip.file('QR_Label_' + scope + '_' + date + '.xlsx', xlsxBin, {base64:true});
+  }
+
+  sub.textContent = 'กำลังบีบอัด ZIP...';
+  var blob = await zip.generateAsync({type:'blob'});
+  overlay.classList.remove('show');
+
+  var link = document.createElement('a');
+  link.download = 'QR_Export_' + scope + '_' + date + '.zip';
+  link.href = URL.createObjectURL(blob);
+  link.click();
+  setTimeout(function(){ URL.revokeObjectURL(link.href); }, 5000);
+  showToast('✓ ZIP พร้อมแล้ว: ' + totalLabels + ' label + Excel');
+}
+
+function generateLabelPNG(a, cur, tot, baseUrl){
+  return new Promise(function(resolve){
+    var S = QRPL_SCALE;
+    var QR_SIZE = Math.round(QRPL_H * S * 0.85);
+    var url = baseUrl + '?asset=' + a.asset;
+    var tmp = document.createElement('div');
+    tmp.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:'+QR_SIZE+'px';
+    document.body.appendChild(tmp);
+    new QRCode(tmp,{text:url,width:QR_SIZE,height:QR_SIZE,colorDark:'#111111',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.L});
+    setTimeout(function(){
+      var qrEl = tmp.querySelector('canvas') || tmp.querySelector('img');
+      var cvs = document.createElement('canvas');
+      cvs.width = QRPL_W * S; cvs.height = QRPL_H * S;
+      var ctx = cvs.getContext('2d');
+      qrpRenderLabel(ctx, QRPL_W, QRPL_H, a, cur, tot, url, S, qrEl);
+      document.body.removeChild(tmp);
+      resolve(cvs.toDataURL('image/png').split(',')[1]);
+    }, 150);
+  });
 }
 
 
