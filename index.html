@@ -2827,6 +2827,50 @@ body.qr-select-mode .asset-card-select { display: block; }
   </div>
 </div>
 
+<div class="main-content">
+
+<!-- Loading -->
+<div id="loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px">
+  <div class="spinner"></div>
+  <div class="loading-label" style="margin-top:16px">กำลังโหลดข้อมูล...</div>
+</div>
+
+<!-- Dashboard -->
+  <div class="tab-pane active" id="tab-dash">
+    <div class="page-hd">
+      <div class="page-hd-left">
+        <div class="page-hd-eyebrow">Enterprise Asset Management</div>
+        <div class="page-hd-title">ภาพรวมทรัพย์สิน</div>
+        <div class="page-hd-sub">ข้อมูลมูลค่าและค่าเสื่อมราคาคำนวณ ณ เวลาปัจจุบัน</div>
+      </div>
+    </div>
+    <div id="dash-content"></div>
+  </div>
+
+  <!-- List — Phase 2 redesign -->
+  <div class="tab-pane" id="tab-list">
+
+    <!-- Sticky search bar -->
+    <div class="list-sticky">
+      <div class="list-search-wrap">
+        <div class="search-field search-field-lg">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="fq" placeholder="ค้นหาเลข Asset หรือชื่อทรัพย์สิน..." oninput="applyFilters()" autocomplete="off">
+          <button class="search-clear" id="fq-clear" onclick="clearSearch()" title="ล้าง">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <button class="btn btn-ghost btn-sm filter-toggle-btn" onclick="toggleFilters()" id="filter-toggle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          กรอง
+          <span class="filter-count" id="filter-count" style="display:none">1</span>
+        </button>
+        <div class="export-menu-wrap">
+          <button class="btn btn-ghost btn-sm" onclick="openExportModal()" id="export-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export
+          </button>
+          >
   </div><!-- end main-content -->
 </div><!-- end main-area -->
 
@@ -2884,50 +2928,7 @@ body.qr-select-mode .asset-card-select { display: block; }
   </div>
 
   <!-- Scroll content -->
-  <div class="main-content">
-
-<!-- Loading -->
-<div id="loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px">
-  <div class="spinner"></div>
-  <div class="loading-label" style="margin-top:16px">กำลังโหลดข้อมูล...</div>
-</div>
-
-<!-- Dashboard -->
-  <div class="tab-pane active" id="tab-dash">
-    <div class="page-hd">
-      <div class="page-hd-left">
-        <div class="page-hd-eyebrow">Enterprise Asset Management</div>
-        <div class="page-hd-title">ภาพรวมทรัพย์สิน</div>
-        <div class="page-hd-sub">ข้อมูลมูลค่าและค่าเสื่อมราคาคำนวณ ณ เวลาปัจจุบัน</div>
-      </div>
-    </div>
-    <div id="dash-content"></div>
-  </div>
-
-  <!-- List — Phase 2 redesign -->
-  <div class="tab-pane" id="tab-list">
-
-    <!-- Sticky search bar -->
-    <div class="list-sticky">
-      <div class="list-search-wrap">
-        <div class="search-field search-field-lg">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-          <input id="fq" placeholder="ค้นหาเลข Asset หรือชื่อทรัพย์สิน..." oninput="applyFilters()" autocomplete="off">
-          <button class="search-clear" id="fq-clear" onclick="clearSearch()" title="ล้าง">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          </button>
-        </div>
-        <button class="btn btn-ghost btn-sm filter-toggle-btn" onclick="toggleFilters()" id="filter-toggle">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-          กรอง
-          <span class="filter-count" id="filter-count" style="display:none">1</span>
-        </button>
-        <div class="export-menu-wrap">
-          <button class="btn btn-ghost btn-sm" onclick="openExportModal()" id="export-btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Export
-          </button>
-          >
+  
 
 <script>
 
