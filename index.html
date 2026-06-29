@@ -726,9 +726,9 @@ input, textarea, select { font-family: var(--font-thai); }
 
 /* ── LOADING ──────────────────────────────────────────── */
 #loading {
-  position: fixed; inset: 0; background: var(--bg);
-  z-index: 999; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: var(--sp-4);
+  background: transparent;
+  min-height: 200px;
+  align-items: center; justify-content: center;
 }
 .spinner {
   width: 40px; height: 40px;
@@ -2036,7 +2036,7 @@ input, textarea, select { font-family: var(--font-thai); }
   <div class="main-content">
 
 <!-- Loading -->
-<div id="loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px">
+<div id="loading" style="display:none;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px">
   <div class="spinner"></div>
   <div class="loading-label" style="margin-top:16px">กำลังโหลดข้อมูล...</div>
 </div>
@@ -3533,7 +3533,7 @@ async function initApp(){
     renderList();
     renderMobileLanding();
     var ldEl=document.getElementById('loading');
-    if(ldEl){ldEl.style.display='none';ldEl.style.visibility='hidden';ldEl.style.opacity='0';ldEl.style.pointerEvents='none';}
+    if(ldEl){ldEl.style.cssText='display:none!important;visibility:hidden;opacity:0;pointer-events:none;';}
     console.log('initApp: loading hidden, showing app');
     document.getElementById('card-grid').className='asset-grid';
     // Handle ?asset=ID URL param (from QR code scan)
