@@ -2546,7 +2546,7 @@ body.qr-select-mode .asset-card-select { display: block; }
       <div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
       <div class="mob-menu-label">หมดอายุบัญชี</div>
     </div>
-    <div class="mob-menu-card" onclick="mobExport()">
+    <div class="mob-menu-card" onclick="openExportModal()">
       <div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
       <div class="mob-menu-label">Export Excel</div>
     </div>
@@ -2765,9 +2765,9 @@ body.qr-select-mode .asset-card-select { display: block; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
       หมดอายุทางบัญชี
     </button>
-    <button class="sidebar-item" onclick="exportExcel()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      Export Excel
+    <button class="sidebar-item" onclick="openExportModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export ข้อมูล
     </button>
   </nav>
 
@@ -2923,138 +2923,14 @@ body.qr-select-mode .asset-card-select { display: block; }
           <span class="filter-count" id="filter-count" style="display:none">1</span>
         </button>
         <div class="export-menu-wrap">
-          <button class="btn btn-ghost btn-sm" onclick="toggleExport()" id="export-btn">
+          <button class="btn btn-ghost btn-sm" onclick="openExportModal()" id="export-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export
           </button>
-          <div class="export-dropdown" id="export-dropdown">
-            <button class="export-item" onclick="exportExcel();toggleExport()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              Export Excel (.xlsx)
-            </button>
-            <button class="export-item" onclick="exportCSV();toggleExport()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              Export CSV (.csv)
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Filter panel -->
-      <div class="filter-panel" id="filter-panel">
-        <div class="filter-panel-inner">
-          <div class="filter-row">
-            <div class="filter-group">
-              <label class="filter-label">กลุ่มทรัพย์สิน</label>
-              <select class="filter-select" id="fgrp" onchange="applyFilters()"><option value="">ทั้งหมด</option></select>
-            </div>
-            <div class="filter-group">
-              <label class="filter-label">สถานะ</label>
-              <select class="filter-select" id="fstat" onchange="applyFilters()">
-                <option value="">ทั้งหมด</option>
-                <option value="active">กำลังตัดค่าเสื่อม</option>
-                <option value="done">หมดอายุทางบัญชี</option>
-                <option value="future">ยังไม่เริ่มตัด</option>
-              </select>
-            </div>
-            <button class="btn btn-ghost btn-sm" onclick="clearFilters()">ล้างตัวกรอง</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- QR Download Toolbar -->
-    <div class="qr-toolbar">
-      <div class="qr-toolbar-left">
-        <div class="qr-toolbar-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h.01M14 17h3M17 14v3"/></svg>
-        </div>
-        <div>
-          <div class="qr-toolbar-title">QR Code ทรัพย์สิน</div>
-          <div class="qr-toolbar-sub">ดาวน์โหลด QR สำหรับติดบนทรัพย์สิน</div>
-        </div>
-      </div>
-      <div class="qr-toolbar-btns">
-        <button class="btn btn-ghost btn-sm" onclick="downloadAllQR()" id="qr-all-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          โหลดทั้งหมด
-        </button>
-        <button class="btn btn-primary btn-sm" onclick="qrSelectMode()" id="qr-select-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          เลือกรายการ
-        </button>
-      </div>
-    </div>
-
-  <!-- QR Batch select bar -->
-    <div class="qr-batch-bar" id="qr-batch-bar">
-      <div class="qr-batch-count" id="qr-batch-count">เลือก 0 รายการ</div>
-      <div class="qr-batch-actions">
-        <button class="qr-batch-btn ghost" onclick="qrSelectAll()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          เลือกทั้งหมด
-        </button>
-        <button class="qr-batch-btn primary" onclick="downloadQRBatch()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          ดาวน์โหลด ZIP
-        </button>
-        <button class="qr-batch-btn ghost" onclick="qrSelectCancel()">ยกเลิก</button>
-      </div>
-    </div>
-
-    <!-- Progress overlay -->
-    <div class="qr-progress-overlay" id="qr-progress-overlay">
-      <div class="qr-progress-card">
-        <div class="qr-progress-title">กำลัง Generate QR Code...</div>
-        <div class="qr-progress-sub" id="qr-progress-sub">รอสักครู่</div>
-        <div class="qr-progress-bar"><div class="qr-progress-fill" id="qr-progress-fill"></div></div>
-        <div class="qr-progress-pct" id="qr-progress-pct">0%</div>
-      </div>
-    </div>
-
-    <!-- List header -->
-    <div class="list-header">
-      <div class="list-count">
-        <span class="list-count-num" id="list-count-num">—</span>
-        <span>รายการ</span>
-      </div>
-      <div class="view-toggle">
-        <button class="view-btn active" id="view-card" onclick="setView('card')" title="Card view">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        </button>
-        <button class="view-btn" id="view-table" onclick="setView('table')" title="Table view">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
-        </button>
-      </div>
-    </div>
-
-    <!-- Card grid -->
-    <div id="card-grid" class="asset-grid"></div>
-
-    <!-- Table view -->
-    <div id="table-view" style="display:none">
-      <div class="card">
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead><tr>
-              <th>เลข Asset</th><th>ชื่อทรัพย์สิน</th>
-              <th>กลุ่ม</th><th class="r">มูลค่าคงเหลือ (บาท)</th>
-              <th>วันที่ได้มา</th><th>สถานะ</th>
-            </tr></thead>
-            <tbody id="list-body"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-
-
-
-
+          >
 
 <script>
+
 
 
 // ── Auth Config ───────────────────────────────────────────────
@@ -4962,30 +4838,7 @@ function init(){
 }
 init();
 
-</script>
-<!-- GLOBAL MOBILE BOTTOM NAV -->
-<div id="mobile-bottom-nav-global">
-  <button class="mob-nav-item" onclick="mobHome()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-    <span class="mob-nav-label">หน้าหลัก</span>
-  </button>
-  <button class="mob-nav-item" onclick="mobGoList('')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
-    <span class="mob-nav-label">รายการ</span>
-  </button>
-  <button class="mob-nav-item" onclick="mobScanQR()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
-    <span class="mob-nav-label">สแกน QR</span>
-  </button>
-  <button class="mob-nav-item" onclick="mobReports()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-    <span class="mob-nav-label">รายงาน</span>
-  </button>
-  <button class="mob-nav-item" onclick="showLogout()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    <span class="mob-nav-label">บัญชี</span>
-  </button>
-</div>
 
+</script>
 </body>
 </html>
