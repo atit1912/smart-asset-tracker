@@ -2239,6 +2239,32 @@ body.qr-select-mode .asset-card-select { display: block; }
 .qr-progress-fill { height: 100%; background: var(--primary-500); border-radius: 4px; transition: width .2s; width: 0%; }
 .qr-progress-pct { font-family: var(--font-mono); font-size: 13px; color: var(--ink-3); }
 
+
+/* QR Toolbar */
+.qr-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface-0); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 14px 16px;
+  margin-bottom: 12px; gap: 12px; flex-wrap: wrap;
+  box-shadow: var(--shadow-xs);
+}
+.qr-toolbar-left { display: flex; align-items: center; gap: 12px; }
+.qr-toolbar-icon {
+  width: 40px; height: 40px; border-radius: var(--r-md);
+  background: var(--primary-50); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.qr-toolbar-icon svg { width: 20px; height: 20px; color: var(--primary-500); }
+.qr-toolbar-title { font-size: 14px; font-weight: 700; color: var(--ink); }
+.qr-toolbar-sub { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+.qr-toolbar-btns { display: flex; gap: 8px; flex-shrink: 0; }
+
+@media (max-width: 480px) {
+  .qr-toolbar { flex-direction: column; align-items: flex-start; }
+  .qr-toolbar-btns { width: 100%; }
+  .qr-toolbar-btns .btn { flex: 1; justify-content: center; }
+}
+[data-theme="light"] .qr-toolbar-icon { background: #EFF6FF; }
+
 </style>
 </head>
 <body>
@@ -2640,7 +2666,30 @@ body.qr-select-mode .asset-card-select { display: block; }
       </div>
     </div>
 
-    <!-- QR Batch select bar -->
+    <!-- QR Download Toolbar -->
+    <div class="qr-toolbar">
+      <div class="qr-toolbar-left">
+        <div class="qr-toolbar-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h.01M14 17h3M17 14v3"/></svg>
+        </div>
+        <div>
+          <div class="qr-toolbar-title">QR Code ทรัพย์สิน</div>
+          <div class="qr-toolbar-sub">ดาวน์โหลด QR สำหรับติดบนทรัพย์สิน</div>
+        </div>
+      </div>
+      <div class="qr-toolbar-btns">
+        <button class="btn btn-ghost btn-sm" onclick="downloadAllQR()" id="qr-all-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          ทั้งหมด
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="qrSelectMode()" id="qr-select-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          เลือกรายการ
+        </button>
+      </div>
+    </div>
+
+  <!-- QR Batch select bar -->
     <div class="qr-batch-bar" id="qr-batch-bar">
       <div class="qr-batch-count" id="qr-batch-count">เลือก 0 รายการ</div>
       <div class="qr-batch-actions">
@@ -2672,11 +2721,6 @@ body.qr-select-mode .asset-card-select { display: block; }
         <span class="list-count-num" id="list-count-num">—</span>
         <span>รายการ</span>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn btn-ghost btn-sm" onclick="qrSelectMode()" title="เลือก QR หลายรายการ">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h.01M14 17h3M17 14v3"/></svg>
-          เลือก QR
-        </button>
       <div class="view-toggle">
         <button class="view-btn active" id="view-card" onclick="setView('card')" title="Card view">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -2684,7 +2728,6 @@ body.qr-select-mode .asset-card-select { display: block; }
         <button class="view-btn" id="view-table" onclick="setView('table')" title="Table view">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
         </button>
-      </div>
       </div>
     </div>
 
@@ -3369,49 +3412,86 @@ function getQRCanvas(){
 
 function downloadQR(){
   var a=_qrCurrentAsset;
-  if(!a) return;
-  var el=getQRCanvas();
-  if(!el){showToast('ยังไม่มี QR code'); return;}
-  var canvas;
-  if(el.tagName==='CANVAS'){
-    canvas=el;
-  } else {
-    // img → canvas
-    canvas=document.createElement('canvas');
-    canvas.width=el.naturalWidth||220;
-    canvas.height=el.naturalHeight||220;
-    canvas.getContext('2d').drawImage(el,0,0);
-  }
-  // Draw QR with white background + labels
-  var final=document.createElement('canvas');
-  final.width=260; final.height=320;
-  var ctx=final.getContext('2d');
-  ctx.fillStyle='#ffffff';
-  ctx.fillRect(0,0,260,320);
-  // Top label: CPF
-  ctx.fillStyle='#2563EB';
-  ctx.font='bold 14px sans-serif';
-  ctx.textAlign='center';
-  ctx.fillText('CPF',130,22);
-  // Asset ID
-  ctx.fillStyle='#111827';
-  ctx.font='bold 13px monospace';
-  ctx.fillText(a.asset,130,40);
-  // Asset name (wrap if long)
-  ctx.font='12px sans-serif';
-  ctx.fillStyle='#374151';
-  var name=a.desc||'';
-  if(name.length>30) name=name.slice(0,29)+'…';
-  ctx.fillText(name,130,56);
-  // QR image
-  ctx.drawImage(canvas,20,64,220,220);
-  // Download
-  var link=document.createElement('a');
-  var safeName=(a.desc||a.asset).replace(/[^ก-๙a-zA-Z0-9]/g,'_').slice(0,30);
-  link.download='QR_'+a.asset+'_'+safeName+'.png';
-  link.href=final.toDataURL('image/png');
-  link.click();
-  showToast('✓ บันทึก QR_'+a.asset+'.png แล้ว');
+  if(!a){showToast('ไม่มีข้อมูล asset');return;}
+  // Re-generate QR at high resolution (4x) for crisp download
+  generateQRHighRes(a, window.location.origin+window.location.pathname).then(function(dataUrl){
+    var link=document.createElement('a');
+    var safeName=(a.desc||a.asset).replace(/[^ก-๙a-zA-Z0-9]/g,'_').slice(0,30);
+    link.download='QR_'+a.asset+'_'+safeName+'.png';
+    link.href='data:image/png;base64,'+dataUrl;
+    link.click();
+    showToast('✓ บันทึก QR_'+a.asset+'.png แล้ว');
+  });
+}
+
+// Generate high-res QR (shared by single download + batch)
+function generateQRHighRes(a, baseUrl){
+  var SCALE=4; // 4x = 880px QR → crisp for printing
+  return new Promise(function(resolve){
+    var url=(baseUrl||window.location.origin+window.location.pathname)+'?asset='+a.asset;
+    var qrSize=220*SCALE;
+    // Temp container
+    var tmp=document.createElement('div');
+    tmp.style.cssText='position:absolute;left:-9999px;top:-9999px;width:'+qrSize+'px;height:'+qrSize+'px';
+    document.body.appendChild(tmp);
+    new QRCode(tmp,{
+      text:url, width:qrSize, height:qrSize,
+      colorDark:'#111827', colorLight:'#ffffff',
+      correctLevel:QRCode.CorrectLevel.H
+    });
+    setTimeout(function(){
+      var qrEl=tmp.querySelector('canvas')||tmp.querySelector('img');
+      var W=260*SCALE, H=320*SCALE;
+      var final=document.createElement('canvas');
+      final.width=W; final.height=H;
+      var ctx=final.getContext('2d');
+      // White background
+      ctx.fillStyle='#ffffff';
+      ctx.fillRect(0,0,W,H);
+      // Top border accent
+      ctx.fillStyle='#2563EB';
+      ctx.fillRect(0,0,W,8*SCALE);
+      // CPF label
+      ctx.fillStyle='#2563EB';
+      ctx.font='bold '+(14*SCALE)+'px Arial,sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText('CPF',W/2,28*SCALE);
+      // Asset ID
+      ctx.fillStyle='#111827';
+      ctx.font='bold '+(13*SCALE)+'px "Courier New",monospace';
+      ctx.fillText(a.asset,W/2,46*SCALE);
+      // Asset name (auto-wrap)
+      ctx.font=(11*SCALE)+'px Arial,sans-serif';
+      ctx.fillStyle='#374151';
+      var name=a.desc||'';
+      var maxW=W-40*SCALE;
+      if(ctx.measureText(name).width>maxW){
+        // Word wrap
+        var words=name.split('');
+        var line='';
+        var y=60*SCALE;
+        for(var wi=0;wi<words.length;wi++){
+          var test=line+words[wi];
+          if(ctx.measureText(test).width>maxW&&wi>0){
+            ctx.fillText(line,W/2,y);
+            line=words[wi]; y+=14*SCALE;
+          } else { line=test; }
+        }
+        ctx.fillText(line,W/2,y);
+      } else {
+        ctx.fillText(name,W/2,60*SCALE);
+      }
+      // QR image (centered)
+      var qrX=20*SCALE, qrY=72*SCALE, qrW=220*SCALE, qrH=220*SCALE;
+      if(qrEl) ctx.drawImage(qrEl,qrX,qrY,qrW,qrH);
+      // Bottom border
+      ctx.fillStyle='#2563EB';
+      ctx.fillRect(0,H-4*SCALE,W,4*SCALE);
+      // Cleanup
+      document.body.removeChild(tmp);
+      resolve(final.toDataURL('image/png').split(',')[1]);
+    },150);
+  });
 }
 function closeQR(e){
   if(!e||e.target===document.getElementById('qr-modal'))
@@ -4034,6 +4114,45 @@ function updateBatchCount(){
   if(el) el.textContent='เลือก '+n+' รายการ';
 }
 
+
+async function downloadAllQR(){
+  if(!ALL.length){showToast('ยังไม่มีข้อมูล');return;}
+  var assets=filtered.length?filtered:ALL;
+  if(assets.length>100){
+    if(!confirm('จะดาวน์โหลด QR Code '+assets.length+' รายการ\n(ใช้เวลาสักครู่) ดำเนินการต่อ?')) return;
+  }
+  if(typeof JSZip==='undefined'){showToast('โหลด JSZip ไม่สำเร็จ กรุณารีเฟรช');return;}
+  if(typeof QRCode==='undefined'){showToast('โหลด QRCode library ไม่สำเร็จ');return;}
+  var total=assets.length;
+  var overlay=document.getElementById('qr-progress-overlay');
+  var fill=document.getElementById('qr-progress-fill');
+  var sub=document.getElementById('qr-progress-sub');
+  var pct=document.getElementById('qr-progress-pct');
+  overlay.classList.add('show');
+  var zip=new JSZip();
+  var baseUrl=window.location.origin+window.location.pathname;
+  for(var i=0;i<total;i++){
+    var a=assets[i];
+    var pctVal=Math.round((i+1)/total*100);
+    fill.style.width=pctVal+'%';
+    pct.textContent=pctVal+'%';
+    sub.textContent='('+(i+1)+'/'+total+') '+a.asset;
+    var imgData=await generateQRHighRes(a,baseUrl);
+    var safeName=(a.desc||a.asset).replace(/[^ก-๙a-zA-Z0-9]/g,'_').slice(0,25);
+    zip.file('QR_'+a.asset+'_'+safeName+'.png',imgData,{base64:true});
+    if(i%5===0) await new Promise(function(r){setTimeout(r,1);});
+  }
+  sub.textContent='กำลังบีบอัดไฟล์...';
+  var blob=await zip.generateAsync({type:'blob'});
+  overlay.classList.remove('show');
+  var link=document.createElement('a');
+  link.download='QR_ทั้งหมด_'+total+'รายการ.zip';
+  link.href=URL.createObjectURL(blob);
+  link.click();
+  setTimeout(function(){URL.revokeObjectURL(link.href);},5000);
+  showToast('✓ ดาวน์โหลด QR '+total+' รายการแล้ว');
+}
+
 async function downloadQRBatch(){
   if(_qrSelected.size===0){showToast('กรุณาเลือกรายการก่อน');return;}
   if(typeof JSZip==='undefined'){showToast('โหลด JSZip ไม่สำเร็จ กรุณารีเฟรช');return;}
@@ -4079,46 +4198,8 @@ async function downloadQRBatch(){
 }
 
 function generateQRImage(a, baseUrl){
-  return new Promise(function(resolve){
-    var url=baseUrl+'?asset='+a.asset;
-    var tmp=document.createElement('div');
-    tmp.style.cssText='position:absolute;left:-9999px;top:-9999px;width:220px;height:220px';
-    document.body.appendChild(tmp);
-
-    new QRCode(tmp,{text:url,width:220,height:220,colorDark:'#111827',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
-
-    setTimeout(function(){
-      var qrEl=tmp.querySelector('canvas')||tmp.querySelector('img');
-      // Draw final canvas with labels
-      var final=document.createElement('canvas');
-      final.width=260; final.height=320;
-      var ctx=final.getContext('2d');
-      ctx.fillStyle='#ffffff';
-      ctx.fillRect(0,0,260,320);
-      // CPF label
-      ctx.fillStyle='#2563EB';
-      ctx.font='bold 14px sans-serif';
-      ctx.textAlign='center';
-      ctx.fillText('CPF',130,20);
-      // Asset ID
-      ctx.fillStyle='#111827';
-      ctx.font='bold 13px monospace';
-      ctx.fillText(a.asset,130,38);
-      // Asset name
-      ctx.font='11px sans-serif';
-      ctx.fillStyle='#374151';
-      var name=a.desc||'';
-      if(name.length>32) name=name.slice(0,31)+'…';
-      ctx.fillText(name,130,54);
-      // QR
-      if(qrEl) ctx.drawImage(qrEl,20,62,220,220);
-      // Clean up
-      document.body.removeChild(tmp);
-      // Return base64 without header
-      var dataUrl=final.toDataURL('image/png');
-      resolve(dataUrl.split(',')[1]);
-    },120);
-  });
+  // Use high-res generator for batch too
+  return generateQRHighRes(a, baseUrl);
 }
 
 // ── Entry point ──────────────────────────────────────
