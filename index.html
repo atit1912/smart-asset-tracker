@@ -17,9 +17,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════════
    PHASE 1 DESIGN SYSTEM — Enterprise Asset Management
@@ -727,7 +725,11 @@ input, textarea, select { font-family: var(--font-thai); }
 .save-confirm.show { opacity: 1; }
 
 /* ── LOADING ──────────────────────────────────────────── */
-/* loading inline only */
+#loading {
+  position: fixed; inset: 0; background: var(--bg);
+  z-index: 999; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: var(--sp-4);
+}
 .spinner {
   width: 40px; height: 40px;
   border: 3px solid var(--border);
@@ -1100,7 +1102,7 @@ input, textarea, select { font-family: var(--font-thai); }
 .ap-cover-placeholder svg { width: 64px; height: 64px; color: rgba(255,255,255,.12); }
 
 .ap-hero-overlay {
-  position: absolute; inset: 0; pointer-events: none;
+  position: absolute; inset: 0;
   background: linear-gradient(to top, rgba(10,15,30,.95) 0%, rgba(10,15,30,.3) 60%, transparent 100%);
 }
 .ap-hero-content {
@@ -1136,9 +1138,9 @@ input, textarea, select { font-family: var(--font-thai); }
 
 /* QR button */
 .ap-qr-btn {
-  position: absolute; top: 12px; right: 12px; z-index: 5;
+  position: absolute; top: 12px; right: 12px;
   width: 40px; height: 40px; border-radius: var(--r-sm);
-  background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.15);
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.15);
   backdrop-filter: blur(8px); color: rgba(255,255,255,.8);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; transition: background .15s;
@@ -1345,7 +1347,7 @@ input, textarea, select { font-family: var(--font-thai); }
 
 /* QR Modal */
 .qr-modal {
-  position: fixed; inset: 0; z-index: 9999;
+  position: fixed; inset: 0; z-index: 500;
   background: rgba(0,0,0,.7); display: none;
   align-items: center; justify-content: center;
   padding: 20px;
@@ -1467,9 +1469,9 @@ input, textarea, select { font-family: var(--font-thai); }
 /* ── Sidebar ──────────────────────────────────────── */
 .sidebar {
   width: 220px; flex-shrink: 0;
-  background: #0F172A !important;
+  background: var(--topbar-bg);
   display: flex; flex-direction: column;
-  border-right: 1px solid rgba(255,255,255,.1) !important;
+  border-right: 1px solid rgba(255,255,255,.06);
   position: fixed; left: 0; top: 0; bottom: 0; z-index: 50;
   transition: transform .25s;
 }
@@ -1664,7 +1666,7 @@ input, textarea, select { font-family: var(--font-thai); }
   .sidebar-backdrop.open { display: block; }
   .sidebar-toggle { display: flex; }
   .main-area { margin-left: 0; }
-  .main-topbar { padding-left: 16px; }
+  .main-topbar { padding-left: 58px; }
   .dash-grid { grid-template-columns: 1fr; }
   .dash-kpi-row { grid-template-columns: 1fr 1fr; }
   .dash-chart-block, .dash-alert-block, .dash-table-block { grid-column: 1/-1; }
@@ -1801,650 +1803,6 @@ input, textarea, select { font-family: var(--font-thai); }
 .logout-actions { display: flex; gap: 10px; }
 .logout-actions .btn { flex: 1; justify-content: center; }
 
-
-/* Loading div - inline only, not fixed */
-#loading {
-  background: transparent;
-  min-height: 200px;
-}
-
-/* Dashboard simple 2-column layout */
-.dash-kpi-row {
-  display: grid; grid-template-columns: repeat(4, 1fr);
-  gap: 16px; margin-bottom: 16px;
-}
-.dash-2col {
-  display: grid; grid-template-columns: 1fr 340px;
-  gap: 16px; margin-bottom: 16px;
-}
-@media (max-width: 1000px) {
-  .dash-kpi-row { grid-template-columns: 1fr 1fr; }
-  .dash-2col { grid-template-columns: 1fr; }
-}
-@media (max-width: 560px) {
-  .dash-kpi-row { grid-template-columns: 1fr 1fr; }
-}
-
-
-/* ═══ LIGHT MODE READABILITY FIXES ═══ */
-[data-theme="light"] .main-topbar { background:#FFFFFF; border-bottom:1px solid #E5E7EB; box-shadow:0 1px 3px rgba(0,0,0,.05); }
-[data-theme="light"] .main-topbar-title { color:#111827; }
-[data-theme="light"] .top-clock { color:#6B7280; }
-[data-theme="light"] .icon-btn { background:#F3F4F6; border-color:#E5E7EB; color:#374151; }
-[data-theme="light"] .live-pill { background:rgba(5,150,105,.1); border-color:rgba(5,150,105,.25); color:#059669; }
-[data-theme="light"] .user-chip { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.1); }
-[data-theme="light"] .user-chip-name { color:#374151; }
-
-[data-theme="light"] .donut-card,
-[data-theme="light"] .alert-card,
-[data-theme="light"] .kpi-card,
-[data-theme="light"] .card { background:#FFFFFF; border-color:#E5E7EB; }
-[data-theme="light"] .donut-title { color:#111827; }
-[data-theme="light"] .donut-sub { color:#6B7280; }
-[data-theme="light"] .donut-center-val { color:#111827; }
-[data-theme="light"] .donut-center-label { color:#6B7280; }
-[data-theme="light"] .donut-legend-name { color:#374151; }
-[data-theme="light"] .donut-legend-val { color:#4B5563; }
-[data-theme="light"] .donut-legend-pct { color:#9CA3AF; }
-[data-theme="light"] .alert-card-title { color:#111827; }
-[data-theme="light"] .alert-item { background:#F9FAFB; border-color:#E5E7EB; }
-[data-theme="light"] .alert-name { color:#111827; }
-[data-theme="light"] .alert-desc { color:#6B7280; }
-[data-theme="light"] .kpi-label { color:#6B7280; }
-[data-theme="light"] .kpi-foot { color:#9CA3AF; }
-[data-theme="light"] .kpi-value { color:#111827; }
-[data-theme="light"] .page-hd-title { color:#111827; }
-[data-theme="light"] .page-hd-sub { color:#6B7280; }
-[data-theme="light"] .sec-label { color:#6B7280; }
-[data-theme="light"] .data-table th { color:#6B7280; }
-[data-theme="light"] .data-table td { color:#374151; }
-[data-theme="light"] .card-header { background:#F9FAFB; }
-
-/* Asset cards light */
-[data-theme="light"] .asset-card { background:#FFFFFF; border-color:#E5E7EB; }
-[data-theme="light"] .card-name { color:#111827; }
-[data-theme="light"] .card-group-tag { color:#6B7280; }
-[data-theme="light"] .card-info-row { color:#6B7280; }
-[data-theme="light"] .card-info-val { color:#374151; }
-[data-theme="light"] .card-footer { background:#F9FAFB; }
-[data-theme="light"] .book-val-num { color:#111827; }
-[data-theme="light"] .search-field-lg { background:#FFFFFF; }
-[data-theme="light"] .search-field-lg input { color:#111827; }
-[data-theme="light"] .filter-select { background:#FFFFFF; color:#111827; }
-
-/* Panel light */
-[data-theme="light"] #panel { background:#FFFFFF; }
-[data-theme="light"] .panel-tabs { background:#F9FAFB; }
-[data-theme="light"] .ap-section-title { color:#111827; }
-[data-theme="light"] .info-table .iv { color:#374151; }
-[data-theme="light"] .stat-v { color:#111827; }
-[data-theme="light"] .form-input,[data-theme="light"] .form-textarea { background:#F9FAFB; color:#111827; border-color:#D1D5DB; }
-
-
-.sidebar-logout-btn {
-  display: flex; align-items: center; gap: 10px;
-  width: 100%; margin-top: 8px; padding: 9px 10px;
-  background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.2);
-  border-radius: 8px; color: #F87171; font-size: 13px; font-weight: 600;
-  cursor: pointer; font-family: var(--font-thai);
-  transition: background .15s;
-}
-.sidebar-logout-btn:hover { background: rgba(239,68,68,.2); }
-.sidebar-logout-btn svg { width: 15px; height: 15px; }
-
-
-/* ═══════════════════════════════════════════════════
-   MOBILE LANDING PAGE (≤768px)
-═══════════════════════════════════════════════════ */
-#mobile-landing { display: none; }
-
-@media (max-width: 768px) {
-  /* Hide sidebar completely on mobile - always */
-  .sidebar,
-  .sidebar-toggle,
-  .sidebar-backdrop { display: none !important; }
-  /* main-area full width on mobile */
-  .main-area { margin-left: 0 !important; }
-  body.mobile-home .main-area { display: none !important; }
-  body.mobile-home #mobile-landing { display: block; }
-
-  #mobile-landing {
-    min-height: 100vh;
-    background: var(--bg);
-    padding-bottom: 76px;
-  }
-
-  /* Mobile header */
-  .mob-header {
-    background: linear-gradient(135deg, #2563EB, #1E40AF);
-    padding: 14px 16px;
-    display: flex; align-items: center; gap: 12px;
-    position: sticky; top: 0; z-index: 20;
-  }
-  .mob-header-avatar {
-    width: 38px; height: 38px; border-radius: 50%;
-    background: rgba(255,255,255,.2);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px; font-weight: 700; color: #fff; flex-shrink: 0;
-  }
-  .mob-header-title { flex: 1; font-size: 18px; font-weight: 700; color: #fff; }
-  .mob-header-btn {
-    width: 38px; height: 38px; border: none; background: rgba(255,255,255,.15);
-    border-radius: 10px; color: #fff; display: flex; align-items: center;
-    justify-content: center; cursor: pointer; position: relative;
-  }
-  .mob-header-btn svg { width: 19px; height: 19px; }
-  .mob-header-btn .dot-badge {
-    position: absolute; top: -3px; right: -3px;
-    min-width: 17px; height: 17px; padding: 0 4px;
-    background: #EF4444; border-radius: 9px;
-    font-size: 10px; font-weight: 700; color: #fff;
-    display: flex; align-items: center; justify-content: center;
-    border: 2px solid #2563EB;
-  }
-
-  /* User card */
-  .mob-user-card {
-    margin: 16px;
-    background: linear-gradient(135deg, #3B82F6, #2563EB);
-    border-radius: 16px; padding: 20px;
-    display: flex; align-items: center; gap: 16px;
-    box-shadow: 0 4px 16px rgba(37,99,235,.3);
-  }
-  .mob-user-avatar {
-    width: 56px; height: 56px; border-radius: 50%;
-    background: rgba(255,255,255,.25);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 24px; font-weight: 700; color: #fff; flex-shrink: 0;
-  }
-  .mob-user-name { font-size: 19px; font-weight: 700; color: #fff; }
-  .mob-user-role { font-size: 13px; color: rgba(255,255,255,.8); margin-top: 2px; }
-
-  /* Section label */
-  .mob-section-label {
-    font-size: 15px; font-weight: 700; color: var(--ink);
-    padding: 8px 16px; margin-top: 8px;
-  }
-
-  /* Stat grid */
-  .mob-stat-grid {
-    display: grid; grid-template-columns: 1fr 1fr 1fr;
-    gap: 10px; padding: 0 16px;
-  }
-  .mob-stat-card {
-    background: var(--surface-0);
-    border: 1px solid var(--border);
-    border-radius: 14px; padding: 16px 8px;
-    text-align: center; cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0,0,0,.06);
-    transition: transform .15s;
-  }
-  .mob-stat-card:active { transform: scale(.96); }
-  .mob-stat-num {
-    font-family: var(--font-mono); font-size: 28px; font-weight: 700;
-    line-height: 1; margin-bottom: 6px;
-  }
-  .mob-stat-label { font-size: 12px; color: var(--ink-3); font-weight: 500; }
-
-  /* Menu grid */
-  .mob-menu-grid {
-    display: grid; grid-template-columns: 1fr 1fr 1fr;
-    gap: 10px; padding: 0 16px;
-  }
-  .mob-menu-card {
-    background: var(--surface-0);
-    border: 1px solid var(--border);
-    border-radius: 14px; padding: 18px 8px;
-    text-align: center; cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0,0,0,.06);
-    transition: transform .15s;
-    position: relative;
-  }
-  .mob-menu-card:active { transform: scale(.96); }
-  .mob-menu-icon {
-    width: 44px; height: 44px; margin: 0 auto 8px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .mob-menu-icon svg { width: 26px; height: 26px; }
-  .mob-menu-label { font-size: 12.5px; color: var(--ink-2); font-weight: 600; line-height: 1.3; }
-  .mob-menu-badge {
-    position: absolute; top: 8px; right: 14px;
-    min-width: 18px; height: 18px; padding: 0 5px;
-    background: #EF4444; border-radius: 9px;
-    font-size: 10px; font-weight: 700; color: #fff;
-    display: flex; align-items: center; justify-content: center;
-  }
-
-  /* Bottom nav */
-  .mob-bottom-nav {
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
-    background: var(--surface-0);
-    border-top: 1px solid var(--border);
-    display: flex; padding: 8px 4px;
-    box-shadow: 0 -2px 12px rgba(0,0,0,.06);
-  }
-  .mob-nav-item {
-    flex: 1; display: flex; flex-direction: column;
-    align-items: center; gap: 3px; padding: 4px;
-    border: none; background: none; cursor: pointer;
-    color: var(--ink-4); font-family: var(--font-thai);
-  }
-  .mob-nav-item.active { color: var(--primary-500); }
-  .mob-nav-item svg { width: 22px; height: 22px; }
-  .mob-nav-label { font-size: 10.5px; font-weight: 600; }
-}
-
-/* Dark mode mobile */
-[data-theme="dark"] .mob-stat-card,
-[data-theme="dark"] .mob-menu-card { background: var(--surface-1); }
-
-
-@media (max-width: 768px) {
-  .mob-back-btn {
-    display: flex; align-items: center; justify-content: center;
-    width: 36px; height: 36px; border: none;
-    background: var(--surface-1); border-radius: 9px;
-    color: var(--ink-2); cursor: pointer; margin-right: 8px;
-  }
-  .mob-back-btn svg { width: 18px; height: 18px; }
-}
-@media (min-width: 769px) {
-  .mob-back-btn { display: none !important; }
-}
-
-
-/* QR Scanner Modal */
-.qr-scan-modal {
-  position: fixed; inset: 0; z-index: 10000;
-  background: #0A0F1E; display: none;
-  flex-direction: column;
-}
-.qr-scan-modal.open { display: flex; }
-.qr-scan-header {
-  display: flex; align-items: center; gap: 14px;
-  padding: 16px; background: rgba(0,0,0,.3);
-}
-.qr-scan-close {
-  width: 38px; height: 38px; border: none;
-  background: rgba(255,255,255,.12); border-radius: 10px;
-  color: #fff; display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-}
-.qr-scan-close svg { width: 18px; height: 18px; }
-.qr-scan-title { font-size: 17px; font-weight: 700; color: #fff; }
-#qr-reader { flex: 1; max-height: 60vh; overflow: hidden; }
-#qr-reader video { width: 100% !important; object-fit: cover; }
-.qr-scan-hint {
-  text-align: center; color: rgba(255,255,255,.7);
-  font-size: 14px; padding: 16px;
-}
-.qr-scan-manual { padding: 20px 24px 32px; }
-
-
-@media (max-width: 768px) {
-  /* Bottom nav always visible on mobile (move outside mobile-landing) */
-  #mobile-bottom-nav-global {
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 95;
-    background: var(--surface-0);
-    border-top: 1px solid var(--border);
-    display: flex; padding: 8px 4px;
-    box-shadow: 0 -2px 12px rgba(0,0,0,.08);
-  }
-  /* Add padding to main-content so content isn't hidden behind nav */
-  body:not(.mobile-home) .main-content { padding-bottom: 80px !important; }
-  /* Hide the in-landing bottom nav (use global one) */
-  .mob-bottom-nav { display: none !important; }
-}
-@media (min-width: 769px) {
-  #mobile-bottom-nav-global { display: none !important; }
-}
-
-
-/* Account modal */
-.account-modal {
-  position: fixed; inset: 0; z-index: 10000;
-  background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
-  display: none; align-items: flex-end; justify-content: center;
-  padding: 0;
-}
-.account-modal.open { display: flex; }
-.account-card {
-  background: var(--surface-0); border-radius: 24px 24px 0 0;
-  width: 100%; max-width: 480px;
-  padding: 28px 24px 40px;
-  text-align: center;
-}
-.account-avatar {
-  width: 72px; height: 72px; border-radius: 50%;
-  background: linear-gradient(135deg,#3B82F6,#8B5CF6);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 28px; font-weight: 700; color: #fff;
-  margin: 0 auto 14px;
-}
-.account-name { font-size: 20px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
-.account-role { font-size: 13px; color: var(--ink-3); margin-bottom: 20px; }
-.account-divider { height: 1px; background: var(--border); margin: 16px 0; }
-.account-info-row { display: flex; justify-content: space-between; padding: 4px 0; }
-.account-info-label { font-size: 13px; color: var(--ink-3); }
-.account-info-val { font-size: 13px; color: var(--ink-2); font-weight: 500; }
-.account-logout-btn {
-  width: 100%; padding: 14px; margin-top: 20px;
-  background: #FEF2F2; border: 1.5px solid #FECACA;
-  border-radius: 14px; color: #DC2626;
-  font-size: 15px; font-weight: 700;
-  font-family: var(--font-thai); cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  transition: background .15s;
-}
-.account-logout-btn:hover { background: #FEE2E2; }
-.account-logout-btn svg { width: 18px; height: 18px; }
-.account-close-btn {
-  width: 100%; padding: 13px; margin-top: 10px;
-  background: var(--surface-1); border: 1.5px solid var(--border);
-  border-radius: 14px; color: var(--ink-2);
-  font-size: 15px; font-weight: 600;
-  font-family: var(--font-thai); cursor: pointer;
-}
-[data-theme="dark"] .account-logout-btn { background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.3); }
-
-
-/* QR Modal redesign */
-.qr-modal-brand {
-  font-size: 13px; font-weight: 800; letter-spacing: .15em;
-  text-transform: uppercase; color: var(--primary-500);
-  margin-bottom: 8px;
-}
-.qr-modal-asset-id {
-  font-family: var(--font-mono); font-size: 22px; font-weight: 700;
-  color: var(--ink); letter-spacing: .04em; margin-bottom: 4px;
-}
-.qr-modal-asset-name {
-  font-size: 14px; color: var(--ink-2); font-weight: 500;
-  line-height: 1.4; margin-bottom: 0;
-  max-width: 260px; text-align: center;
-}
-.qr-modal-card {
-  background: var(--surface-0); border-radius: 20px;
-  padding: 24px 24px 20px; max-width: 300px; width: 100%;
-  box-shadow: var(--shadow-xl); text-align: center;
-  border: 1px solid var(--border);
-}
-.qr-modal-actions {
-  display: flex; flex-direction: column; gap: 8px;
-  margin-top: 16px;
-}
-.qr-modal-actions .btn { justify-content: center; width: 100%; }
-.qr-modal-close {
-  width: 100%; padding: 11px; border: 1.5px solid var(--border);
-  border-radius: var(--r-md); background: none; font-family: var(--font-thai);
-  font-size: 14px; font-weight: 600; color: var(--ink-2); cursor: pointer;
-  transition: background .15s;
-}
-.qr-modal-close:hover { background: var(--surface-2); }
-
-
-/* QR Batch select */
-.qr-batch-bar {
-  position: sticky; top: 56px; z-index: 88;
-  background: var(--primary-600, #1D4ED8);
-  color: #fff; padding: 10px 16px;
-  display: none; align-items: center; gap: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.15);
-}
-.qr-batch-bar.show { display: flex; }
-.qr-batch-count { flex: 1; font-size: 14px; font-weight: 600; }
-.qr-batch-actions { display: flex; gap: 8px; }
-.qr-batch-btn {
-  padding: 7px 14px; border-radius: 8px; border: none;
-  font-size: 13px; font-weight: 600; cursor: pointer;
-  font-family: var(--font-thai); display: flex; align-items: center; gap: 6px;
-}
-.qr-batch-btn svg { width: 14px; height: 14px; }
-.qr-batch-btn.primary { background: #fff; color: var(--primary-600, #1D4ED8); }
-.qr-batch-btn.ghost { background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.3); }
-
-.asset-card-select {
-  position: absolute; top: 12px; left: 12px; z-index: 3;
-  width: 22px; height: 22px; border-radius: 6px;
-  border: 2px solid var(--border); background: var(--surface-0);
-  cursor: pointer; appearance: none; -webkit-appearance: none;
-  display: flex; align-items: center; justify-content: center;
-  transition: all .15s;
-}
-.asset-card-select:checked {
-  background: var(--primary-500); border-color: var(--primary-500);
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 5l3.5 3.5L11 1' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: center; background-size: 10px;
-}
-body.qr-select-mode .asset-card { padding-left: 4px; }
-body.qr-select-mode .asset-card-select { display: block; }
-.asset-card-select { display: none; }
-
-/* Progress overlay */
-.qr-progress-overlay {
-  position: fixed; inset: 0; z-index: 9999;
-  background: rgba(0,0,0,.8); backdrop-filter: blur(4px);
-  display: none; flex-direction: column;
-  align-items: center; justify-content: center; gap: 16px;
-}
-.qr-progress-overlay.show { display: flex; }
-.qr-progress-card {
-  background: var(--surface-0); border-radius: 20px;
-  padding: 32px 40px; max-width: 380px; width: 90%;
-  text-align: center;
-}
-.qr-progress-title { font-size: 16px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
-.qr-progress-sub { font-size: 13px; color: var(--ink-3); margin-bottom: 20px; }
-.qr-progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
-.qr-progress-fill { height: 100%; background: var(--primary-500); border-radius: 4px; transition: width .2s; width: 0%; }
-.qr-progress-pct { font-family: var(--font-mono); font-size: 13px; color: var(--ink-3); }
-
-
-/* QR Toolbar */
-.qr-toolbar {
-  display: flex; align-items: center; justify-content: space-between;
-  background: var(--surface-0); border: 1px solid var(--border);
-  border-radius: var(--r-lg); padding: 14px 16px;
-  margin-bottom: 12px; gap: 12px; flex-wrap: wrap;
-  box-shadow: var(--shadow-xs);
-}
-.qr-toolbar-left { display: flex; align-items: center; gap: 12px; }
-.qr-toolbar-icon {
-  width: 40px; height: 40px; border-radius: var(--r-md);
-  background: var(--primary-50); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.qr-toolbar-icon svg { width: 20px; height: 20px; color: var(--primary-500); }
-.qr-toolbar-title { font-size: 14px; font-weight: 700; color: var(--ink); }
-.qr-toolbar-sub { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
-.qr-toolbar-btns { display: flex; gap: 8px; flex-shrink: 0; }
-
-@media (max-width: 480px) {
-  .qr-toolbar { flex-direction: column; align-items: flex-start; }
-  .qr-toolbar-btns { width: 100%; }
-  .qr-toolbar-btns .btn { flex: 1; justify-content: center; }
-}
-[data-theme="light"] .qr-toolbar-icon { background: #EFF6FF; }
-
-
-/* QR Print Label Modal */
-.qr-print-overlay {
-  position: fixed; inset: 0; z-index: 10000;
-  background: rgba(0,0,0,.65); backdrop-filter: blur(4px);
-  display: none; align-items: center; justify-content: center; padding: 16px;
-}
-.qr-print-overlay.open { display: flex; }
-.qr-print-card {
-  background: var(--surface-0); border-radius: 20px;
-  width: 100%; max-width: 620px;
-  box-shadow: 0 24px 48px rgba(0,0,0,.3);
-  border: 1px solid var(--border);
-  overflow: hidden;
-}
-.qr-print-header {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  padding: 20px 20px 16px;
-  border-bottom: 1px solid var(--border);
-}
-.qr-print-title { font-size: 16px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
-.qr-print-sub { font-size: 13px; color: var(--ink-3); }
-.qr-print-close {
-  width: 32px; height: 32px; border: none; background: var(--surface-1);
-  border-radius: 8px; color: var(--ink-3); cursor: pointer;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.qr-print-close svg { width: 15px; height: 15px; }
-.qr-print-body {
-  display: flex; gap: 20px; padding: 20px; flex-wrap: wrap;
-}
-/* Preview canvas */
-.qrp-preview-wrap { flex-shrink: 0; text-align: center; }
-.qrp-preview-wrap canvas {
-  border: 1px solid var(--border); border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.08);
-}
-.qrp-size-label { font-size: 11px; color: var(--ink-4); margin-top: 6px; }
-/* Controls */
-.qrp-controls { flex: 1; min-width: 200px; }
-.qrp-field { margin-bottom: 14px; }
-.qrp-label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-3); margin-bottom: 7px; text-transform: uppercase; letter-spacing: .05em; }
-.qrp-input {
-  width: 100%; padding: 9px 12px; font-family: var(--font-thai); font-size: 14px;
-  border: 1.5px solid var(--border); border-radius: var(--r-md);
-  background: var(--surface-1); color: var(--ink); outline: none;
-  transition: border-color .15s;
-}
-.qrp-input:focus { border-color: var(--primary-400); }
-/* Qty checkbox grid */
-.qrp-qty-list {
-  display: flex; flex-wrap: wrap; gap: 6px; max-height: 160px;
-  overflow-y: auto; padding: 2px;
-}
-.qrp-qty-chip {
-  display: flex; align-items: center; gap: 5px;
-  padding: 5px 10px; border-radius: 20px;
-  border: 1.5px solid var(--border); background: var(--surface-1);
-  font-size: 12.5px; font-weight: 600; color: var(--ink-2);
-  cursor: pointer; user-select: none; transition: all .12s;
-}
-.qrp-qty-chip.selected {
-  background: var(--primary-500); border-color: var(--primary-500); color: #fff;
-}
-.qrp-qty-chip:hover:not(.selected) { border-color: var(--primary-400); }
-/* Actions */
-.qrp-actions { display: flex; gap: 8px; margin-top: 16px; }
-.qrp-btn-all {
-  flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
-  padding: 10px 16px; border: none; border-radius: var(--r-md);
-  background: var(--primary-500); color: #fff;
-  font-size: 14px; font-weight: 600; font-family: var(--font-thai); cursor: pointer;
-  box-shadow: 0 2px 8px rgba(37,99,235,.25); transition: background .15s;
-}
-.qrp-btn-all:hover { background: var(--primary-600); }
-.qrp-btn-all svg { width: 15px; height: 15px; }
-.qrp-btn-ghost {
-  padding: 10px 14px; border: 1.5px solid var(--border); border-radius: var(--r-md);
-  background: none; color: var(--ink-2); font-size: 13px; font-weight: 600;
-  font-family: var(--font-thai); cursor: pointer; transition: all .12s;
-}
-.qrp-btn-ghost:hover { background: var(--surface-1); }
-
-
-/* Export Modal */
-.export-modal-overlay {
-  position: fixed; inset: 0; z-index: 10000;
-  background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
-  display: none; align-items: center; justify-content: center; padding: 16px;
-}
-.export-modal-overlay.open { display: flex; }
-.export-modal-card {
-  background: var(--surface-0); border-radius: 20px;
-  width: 100%; max-width: 480px;
-  border: 1px solid var(--border);
-  box-shadow: 0 24px 48px rgba(0,0,0,.25);
-  overflow: hidden;
-}
-.export-modal-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 20px 16px; border-bottom: 1px solid var(--border);
-}
-.export-modal-title { font-size: 17px; font-weight: 700; color: var(--ink); }
-.export-modal-close {
-  width: 32px; height: 32px; border: none; background: var(--surface-1);
-  border-radius: 8px; color: var(--ink-3); cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-}
-.export-modal-close svg { width: 14px; height: 14px; }
-
-.export-section-label {
-  font-size: 11px; font-weight: 700; color: var(--ink-4);
-  text-transform: uppercase; letter-spacing: .08em;
-  padding: 16px 20px 8px;
-}
-.export-scope-row {
-  display: flex; gap: 8px; padding: 0 20px 16px;
-}
-.export-scope-btn {
-  flex: 1; display: flex; align-items: center; gap: 10px;
-  padding: 12px 14px; border-radius: 12px;
-  border: 1.5px solid var(--border); background: var(--surface-1);
-  cursor: pointer; transition: all .12s;
-}
-.export-scope-btn:has(input:checked) {
-  border-color: var(--primary-400); background: rgba(59,130,246,.06);
-}
-.export-scope-btn input { display: none; }
-.export-scope-main { font-size: 13.5px; font-weight: 600; color: var(--ink); display: block; }
-.export-scope-sub { font-size: 11px; color: var(--ink-3); display: block; margin-top: 2px; }
-
-.export-option-row {
-  display: flex; align-items: center; gap: 14px;
-  padding: 0 20px 14px;
-}
-.export-toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
-.export-toggle input { opacity: 0; width: 0; height: 0; }
-.export-toggle-slider {
-  position: absolute; inset: 0; border-radius: 22px;
-  background: var(--border-strong); cursor: pointer; transition: .2s;
-}
-.export-toggle-slider::before {
-  content: ''; position: absolute; width: 16px; height: 16px;
-  left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .2s;
-}
-.export-toggle input:checked + .export-toggle-slider { background: var(--primary-500); }
-.export-toggle input:checked + .export-toggle-slider::before { transform: translateX(18px); }
-.export-option-main { font-size: 13.5px; font-weight: 600; color: var(--ink); }
-.export-option-sub { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
-
-.export-preview-info {
-  margin: 0 20px 14px;
-  padding: 10px 14px; border-radius: 10px;
-  background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.2);
-  font-size: 13px; color: var(--primary-500); font-weight: 600;
-}
-.export-divider { height: 1px; background: var(--border); margin: 0 20px 0; }
-
-.export-btn-row { display: flex; gap: 8px; padding: 16px 20px 0; }
-.export-action-btn {
-  flex: 1; display: flex; align-items: center; gap: 12px;
-  padding: 14px 16px; border-radius: 14px; border: 1.5px solid var(--border);
-  background: var(--surface-1); cursor: pointer; text-align: left;
-  transition: all .15s; font-family: var(--font-thai);
-}
-.export-action-btn:last-child { margin-right: 0; }
-.export-action-btn:hover { border-color: var(--primary-400); background: rgba(59,130,246,.05); }
-.export-action-btn.zip {
-  width: calc(100% - 40px); margin: 0 20px;
-  background: rgba(59,130,246,.06); border-color: rgba(59,130,246,.25);
-  padding-bottom: 14px; margin-bottom: 20px;
-}
-.export-action-btn.zip:hover { background: rgba(59,130,246,.12); }
-.export-action-btn svg { width: 22px; height: 22px; color: var(--ink-3); flex-shrink: 0; }
-.export-action-btn.excel svg { color: #059669; }
-.export-action-btn.csv svg { color: #D97706; }
-.export-action-btn.zip svg { color: var(--primary-500); }
-.export-action-main { font-size: 14px; font-weight: 700; color: var(--ink); }
-.export-action-sub { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
-
 </style>
 </head>
 <body>
@@ -2498,92 +1856,10 @@ body.qr-select-mode .asset-card-select { display: block; }
   </div>
 </div>
 
-<!-- MOBILE LANDING PAGE -->
-<div id="mobile-landing">
-  <!-- Header -->
-  <div class="mob-header">
-    <div class="mob-header-avatar" id="mob-avatar">A</div>
-    <div class="mob-header-title">หน้าหลัก</div>
-    <button class="mob-header-btn" onclick="toggleTheme()" title="ธีม"><span id="mob-theme-icon">🌙</span></button>
-    <button class="mob-header-btn" onclick="showAccountModal()" title="บัญชี">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    </button>
-  </div>
-
-  <!-- User card -->
-  <div class="mob-user-card">
-    <div class="mob-user-avatar" id="mob-user-avatar">A</div>
-    <div>
-      <div class="mob-user-name" id="mob-user-name">ผู้ดูแลระบบ</div>
-      <div class="mob-user-role" id="mob-user-role">สิทธิ์: Admin</div>
-    </div>
-  </div>
-
-  <!-- Stats -->
-  <div class="mob-section-label">สรุปสถานะทรัพย์สิน</div>
-  <div class="mob-stat-grid" id="mob-stats"></div>
-
-  <!-- Menu -->
-  <div class="mob-section-label">เมนู</div>
-  <div class="mob-menu-grid">
-    <div class="mob-menu-card" onclick="mobGoList('')">
-      <div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
-      <div class="mob-menu-label">ค้นหาทรัพย์สิน</div>
-    </div>
-    <div class="mob-menu-card" onclick="mobGoList('')">
-      <div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></div>
-      <div class="mob-menu-label">รายการทั้งหมด</div>
-    </div>
-    <div class="mob-menu-card" onclick="mobScanQR()">
-      <div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h.01M14 17h3M17 14v3"/></svg></div>
-      <div class="mob-menu-label">สแกน QR</div>
-    </div>
-    <div class="mob-menu-card" onclick="mobGoList('active')">
-      <div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div>
-      <div class="mob-menu-label">กำลังตัดค่าเสื่อม</div>
-    </div>
-    <div class="mob-menu-card" onclick="mobGoList('done')">
-      <div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
-      <div class="mob-menu-label">หมดอายุบัญชี</div>
-    </div>
-    <div class="mob-menu-card" onclick="openExportModal()">
-      <div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-      <div class="mob-menu-label">Export Excel</div>
-    </div>
-  </div>
-
-  <!-- Bottom nav -->
-  <div class="mob-bottom-nav">
-    <button class="mob-nav-item active" onclick="mobHome()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      <span class="mob-nav-label">หน้าหลัก</span>
-    </button>
-    <button class="mob-nav-item" onclick="mobGoList('')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
-      <span class="mob-nav-label">รายการ</span>
-    </button>
-    <button class="mob-nav-item" onclick="mobScanQR()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
-      <span class="mob-nav-label">สแกน QR</span>
-    </button>
-    <button class="mob-nav-item" onclick="mobReports()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      <span class="mob-nav-label">รายงาน</span>
-    </button>
-    <button class="mob-nav-item" onclick="showAccountModal()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      <span class="mob-nav-label">บัญชี</span>
-    </button>
-  </div>
-</div>
-
-
 <!-- QR SCANNER MODAL -->
 <div class="qr-scan-modal" id="qr-scan-modal">
   <div class="qr-scan-header">
-    <button class="qr-scan-close" onclick="closeQRScanner()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
-    </button>
+    <button class="qr-scan-close" onclick="closeQRScanner()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     <div class="qr-scan-title">สแกน QR Code</div>
   </div>
   <div id="qr-reader" style="width:100%"></div>
@@ -2597,58 +1873,34 @@ body.qr-select-mode .asset-card-select { display: block; }
   </div>
 </div>
 
-<!-- ACCOUNT MODAL (mobile) -->
+<!-- ACCOUNT MODAL -->
 <div class="account-modal" id="account-modal">
   <div class="account-card">
     <div class="account-avatar" id="acc-avatar">A</div>
     <div class="account-name" id="acc-name">ผู้ดูแลระบบ</div>
     <div class="account-role" id="acc-role">admin</div>
     <div class="account-divider"></div>
-    <div class="account-info-row">
-      <span class="account-info-label">เข้าสู่ระบบเมื่อ</span>
-      <span class="account-info-val" id="acc-login-at">-</span>
-    </div>
+    <div class="account-info-row"><span class="account-info-label">เข้าสู่ระบบเมื่อ</span><span class="account-info-val" id="acc-login-at">-</span></div>
     <div class="account-divider"></div>
-    <button class="account-logout-btn" onclick="closeAccountModal();showLogout()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      ออกจากระบบ
-    </button>
+    <button class="account-logout-btn" onclick="closeAccountModal();showLogout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>ออกจากระบบ</button>
     <button class="account-close-btn" onclick="closeAccountModal()">ปิด</button>
   </div>
 </div>
-
 
 <!-- QR PRINT LABEL MODAL -->
 <div class="qr-print-overlay" id="qr-print-overlay" onclick="closeQRPrint(event)">
   <div class="qr-print-card" onclick="event.stopPropagation()">
     <div class="qr-print-header">
-      <div>
-        <div class="qr-print-title">พิมพ์ QR Label</div>
-        <div class="qr-print-sub" id="qrp-asset-info">—</div>
-      </div>
-      <button class="qr-print-close" onclick="closeQRPrint()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
-      </button>
+      <div><div class="qr-print-title">พิมพ์ QR Label</div><div class="qr-print-sub" id="qrp-asset-info">—</div></div>
+      <button class="qr-print-close" onclick="closeQRPrint()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
     <div class="qr-print-body">
-      <div class="qrp-preview-wrap">
-        <canvas id="qrp-canvas" width="236" height="113"></canvas>
-        <div class="qrp-size-label">5 × 2.4 cm</div>
-      </div>
+      <div class="qrp-preview-wrap"><canvas id="qrp-canvas" width="236" height="113"></canvas><div class="qrp-size-label">5 × 2.4 cm</div></div>
       <div class="qrp-controls">
-        <div class="qrp-field">
-          <label class="qrp-label">จำนวนทั้งหมด (N)</label>
-          <input class="qrp-input" id="qrp-total" type="number" min="1" value="1" oninput="qrpUpdate()">
-        </div>
-        <div class="qrp-field">
-          <label class="qrp-label">เลือก label ที่จะดาวน์โหลด</label>
-          <div class="qrp-qty-list" id="qrp-qty-list"></div>
-        </div>
+        <div class="qrp-field"><label class="qrp-label">จำนวนทั้งหมด (N)</label><input class="qrp-input" id="qrp-total" type="number" min="1" value="1" oninput="qrpUpdate()"></div>
+        <div class="qrp-field"><label class="qrp-label">เลือก label ที่จะดาวน์โหลด</label><div class="qrp-qty-list" id="qrp-qty-list"></div></div>
         <div class="qrp-actions">
-          <button class="qrp-btn-all" onclick="qrpDownloadSelected()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            ดาวน์โหลดที่เลือก
-          </button>
+          <button class="qrp-btn-all" onclick="qrpDownloadSelected()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>ดาวน์โหลดที่เลือก</button>
           <button class="qrp-btn-ghost" onclick="qrpSelectAll()">เลือกทั้งหมด</button>
         </div>
       </div>
@@ -2659,77 +1911,56 @@ body.qr-select-mode .asset-card-select { display: block; }
 <!-- EXPORT MODAL -->
 <div class="export-modal-overlay" id="export-modal-overlay" onclick="closeExportModal(event)">
   <div class="export-modal-card" onclick="event.stopPropagation()">
-    <div class="export-modal-header">
-      <div class="export-modal-title">Export ข้อมูล</div>
-      <button class="export-modal-close" onclick="closeExportModal()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
-      </button>
-    </div>
-
-    <!-- Scope selector -->
+    <div class="export-modal-header"><div class="export-modal-title">Export ข้อมูล</div><button class="export-modal-close" onclick="closeExportModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
     <div class="export-section-label">เลือกข้อมูลที่จะ export</div>
     <div class="export-scope-row">
-      <label class="export-scope-btn">
-        <input type="radio" name="exp-scope" value="filtered" checked onchange="updateExportCount()">
-        <span class="export-scope-text">
-          <span class="export-scope-main">รายการที่กรองอยู่</span>
-          <span class="export-scope-sub" id="exp-scope-filtered-count">— รายการ</span>
-        </span>
-      </label>
-      <label class="export-scope-btn">
-        <input type="radio" name="exp-scope" value="all" onchange="updateExportCount()">
-        <span class="export-scope-text">
-          <span class="export-scope-main">ทั้งหมด</span>
-          <span class="export-scope-sub" id="exp-scope-all-count">— รายการ</span>
-        </span>
-      </label>
+      <label class="export-scope-btn"><input type="radio" name="exp-scope" value="filtered" checked onchange="updateExportCount()"><span class="export-scope-text"><span class="export-scope-main">รายการที่กรองอยู่</span><span class="export-scope-sub" id="exp-scope-filtered-count">— รายการ</span></span></label>
+      <label class="export-scope-btn"><input type="radio" name="exp-scope" value="all" onchange="updateExportCount()"><span class="export-scope-text"><span class="export-scope-main">ทั้งหมด</span><span class="export-scope-sub" id="exp-scope-all-count">— รายการ</span></span></label>
     </div>
-
-    <!-- Qty expand option -->
     <div class="export-option-row">
-      <label class="export-toggle">
-        <input type="checkbox" id="exp-expand-qty" checked>
-        <span class="export-toggle-slider"></span>
-      </label>
-      <div class="export-option-text">
-        <div class="export-option-main">แตกแถวตามปริมาณ (Qty)</div>
-        <div class="export-option-sub">asset 16 ชิ้น → 16 แถว (1/16 ... 16/16)</div>
-      </div>
+      <label class="export-toggle"><input type="checkbox" id="exp-expand-qty" checked onchange="updateRowInfo()"><span class="export-toggle-slider"></span></label>
+      <div class="export-option-text"><div class="export-option-main">แตกแถวตามปริมาณ (Qty)</div><div class="export-option-sub">asset 16 ชิ้น → 16 แถว</div></div>
     </div>
-
     <div class="export-preview-info" id="exp-row-info">จะได้ — แถว</div>
-
-    <!-- Divider -->
     <div class="export-divider"></div>
-
-    <!-- 2 Action buttons -->
     <div class="export-section-label">เลือกรูปแบบ</div>
     <div class="export-btn-row">
-      <button class="export-action-btn excel" onclick="doExportQRTable('xlsx')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        <div>
-          <div class="export-action-main">Export Excel</div>
-          <div class="export-action-sub">.xlsx — เปิดใน Excel</div>
-        </div>
-      </button>
-      <button class="export-action-btn csv" onclick="doExportQRTable('csv')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        <div>
-          <div class="export-action-main">Export CSV</div>
-          <div class="export-action-sub">.csv — universal</div>
-        </div>
-      </button>
+      <button class="export-action-btn excel" onclick="doExportQRTable('xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><div><div class="export-action-main">Export Excel</div><div class="export-action-sub">.xlsx</div></div></button>
+      <button class="export-action-btn csv" onclick="doExportQRTable('csv')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><div><div class="export-action-main">Export CSV</div><div class="export-action-sub">.csv</div></div></button>
     </div>
-    <button class="export-action-btn zip" onclick="doExportQRZip()" style="margin-top:8px">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      <div>
-        <div class="export-action-main">Export QR ทั้งชุด (ZIP)</div>
-        <div class="export-action-sub">รูป QR PNG ทุกใบ + Excel รวมไฟล์เดียว</div>
-      </div>
-    </button>
-
+    <button class="export-action-btn zip" onclick="doExportQRZip()" style="margin:8px 20px 20px;width:calc(100% - 40px)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><div><div class="export-action-main">Export QR ทั้งชุด (ZIP)</div><div class="export-action-sub">รูป QR PNG + Excel</div></div></button>
   </div>
 </div>
+
+<!-- MOBILE LANDING PAGE -->
+<div id="mobile-landing">
+  <div class="mob-header">
+    <div class="mob-header-avatar" id="mob-avatar">A</div>
+    <div class="mob-header-title">หน้าหลัก</div>
+    <button class="mob-header-btn" onclick="toggleTheme()"><span id="mob-theme-icon">🌙</span></button>
+    <button class="mob-header-btn" onclick="showAccountModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
+  </div>
+  <div class="mob-user-card"><div class="mob-user-avatar" id="mob-user-avatar">A</div><div><div class="mob-user-name" id="mob-user-name">ผู้ดูแลระบบ</div><div class="mob-user-role" id="mob-user-role">สิทธิ์: Admin</div></div></div>
+  <div class="mob-section-label">สรุปสถานะทรัพย์สิน</div>
+  <div class="mob-stat-grid" id="mob-stats"></div>
+  <div class="mob-section-label">เมนู</div>
+  <div class="mob-menu-grid">
+    <div class="mob-menu-card" onclick="mobGoList('')"><div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div><div class="mob-menu-label">ค้นหาทรัพย์สิน</div></div>
+    <div class="mob-menu-card" onclick="mobGoList('')"><div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></div><div class="mob-menu-label">รายการทั้งหมด</div></div>
+    <div class="mob-menu-card" onclick="mobScanQR()"><div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h.01M14 17h3M17 14v3"/></svg></div><div class="mob-menu-label">สแกน QR</div></div>
+    <div class="mob-menu-card" onclick="mobGoList('active')"><div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div><div class="mob-menu-label">กำลังตัดค่าเสื่อม</div></div>
+    <div class="mob-menu-card" onclick="mobGoList('done')"><div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div><div class="mob-menu-label">หมดอายุบัญชี</div></div>
+    <div class="mob-menu-card" onclick="openExportModal()"><div class="mob-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div class="mob-menu-label">Export</div></div>
+  </div>
+  <div class="mob-bottom-nav">
+    <button class="mob-nav-item active" onclick="mobHome()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="mob-nav-label">หน้าหลัก</span></button>
+    <button class="mob-nav-item" onclick="mobGoList('')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span class="mob-nav-label">รายการ</span></button>
+    <button class="mob-nav-item" onclick="mobScanQR()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg><span class="mob-nav-label">สแกน QR</span></button>
+    <button class="mob-nav-item" onclick="mobReports()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="mob-nav-label">รายงาน</span></button>
+    <button class="mob-nav-item" onclick="showAccountModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="mob-nav-label">บัญชี</span></button>
+  </div>
+</div>
+
 <!-- Sidebar backdrop -->
 <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
 
@@ -2766,8 +1997,8 @@ body.qr-select-mode .asset-card-select { display: block; }
       หมดอายุทางบัญชี
     </button>
     <button class="sidebar-item" onclick="openExportModal()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      Export ข้อมูล
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Export Excel
     </button>
   </nav>
 
@@ -2779,10 +2010,6 @@ body.qr-select-mode .asset-card-select { display: block; }
         <div class="sidebar-user-role">ผู้ดูแลระบบ</div>
       </div>
     </div>
-    <button class="sidebar-logout-btn" onclick="showLogout()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      ออกจากระบบ
-    </button>
   </div>
 </div>
 
@@ -2790,6 +2017,33 @@ body.qr-select-mode .asset-card-select { display: block; }
 <button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 </button>
+
+<!-- Main area -->
+<div class="main-area">
+  <!-- Top bar -->
+  <div class="main-topbar">
+    <div class="main-topbar-title" id="main-topbar-title">แผงควบคุม</div>
+    <div class="live-pill"><div class="live-dot"></div>LIVE</div>
+    <div class="top-clock mono" id="top-clock"></div>
+    <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="เปลี่ยนธีม">🌙</button>
+    <div class="user-chip" onclick="showLogout()" title="ออกจากระบบ">
+      <div class="user-chip-avatar" id="topbar-avatar">A</div>
+      <div class="user-chip-name" id="topbar-username">Admin</div>
+    </div>
+  </div>
+
+  <!-- Scroll content -->
+  <div class="main-content">
+
+<!-- Loading -->
+<div id="loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px">
+  <div class="spinner"></div>
+  <div class="loading-label" style="margin-top:16px">กำลังโหลดข้อมูล...</div>
+</div>
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="loading-label">กำลังโหลดข้อมูล...</div>
+</div>
 
 <!-- Overlay -->
 <div id="overlay" onclick="closePanel()"></div>
@@ -2827,15 +2081,41 @@ body.qr-select-mode .asset-card-select { display: block; }
   </div>
 </div>
 
-<div class="main-content">
+  </div><!-- end main-content -->
+</div><!-- end main-area -->
 
-<!-- Loading -->
-<div id="loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px">
-  <div class="spinner"></div>
-  <div class="loading-label" style="margin-top:16px">กำลังโหลดข้อมูล...</div>
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <button class="lightbox-close" onclick="closeLightbox()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </button>
+  <button class="lightbox-nav prev" onclick="lightboxNav(-1);event.stopPropagation()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+  </button>
+  <img class="lightbox-img" id="lightbox-img" src="" alt="">
+  <button class="lightbox-nav next" onclick="lightboxNav(1);event.stopPropagation()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+  </button>
+  <div class="lightbox-counter" id="lightbox-counter"></div>
 </div>
 
-<!-- Dashboard -->
+<!-- QR Modal -->
+<div class="qr-modal" id="qr-modal" onclick="closeQR(event)">
+  <div class="qr-modal-card" onclick="event.stopPropagation()">
+    <div class="qr-modal-title" id="qr-title">QR Code</div>
+    <div class="qr-modal-sub" id="qr-sub">สแกนเพื่อเปิดหน้าทรัพย์สิน</div>
+    <div id="qr-canvas-wrap" style="margin:0 auto 16px;width:200px;height:200px"></div>
+    <div style="font-size:11px;color:var(--ink-4);word-break:break-all;margin-bottom:16px;padding:0 8px" id="qr-url-text"></div>
+    <button class="qr-modal-close" onclick="closeQR()">ปิด</button>
+  </div>
+</div>
+
+<!-- Topbar -->
+
+
+<!-- Main content -->
+
+  <!-- Dashboard -->
   <div class="tab-pane active" id="tab-dash">
     <div class="page-hd">
       <div class="page-hd-left">
@@ -2866,71 +2146,90 @@ body.qr-select-mode .asset-card-select { display: block; }
           <span class="filter-count" id="filter-count" style="display:none">1</span>
         </button>
         <div class="export-menu-wrap">
-          <button class="btn btn-ghost btn-sm" onclick="openExportModal()" id="export-btn">
+          <button class="btn btn-ghost btn-sm" onclick="toggleExport()" id="export-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export
           </button>
-          >
-  </div><!-- end main-content -->
-</div><!-- end main-area -->
+          <div class="export-dropdown" id="export-dropdown">
+            <button class="export-item" onclick="exportExcel();toggleExport()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Export Excel (.xlsx)
+            </button>
+            <button class="export-item" onclick="exportCSV();toggleExport()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Export CSV (.csv)
+            </button>
+          </div>
+        </div>
+      </div>
 
-<!-- Lightbox -->
-<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
-  <button class="lightbox-close" onclick="closeLightbox()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
-  </button>
-  <button class="lightbox-nav prev" onclick="lightboxNav(-1);event.stopPropagation()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
-  </button>
-  <img class="lightbox-img" id="lightbox-img" src="" alt="">
-  <button class="lightbox-nav next" onclick="lightboxNav(1);event.stopPropagation()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
-  </button>
-  <div class="lightbox-counter" id="lightbox-counter"></div>
-</div>
-
-<!-- QR Modal -->
-<div class="qr-modal" id="qr-modal" onclick="closeQR(event)">
-  <div class="qr-modal-card" onclick="event.stopPropagation()">
-    <div class="qr-modal-brand">CPF</div>
-    <div class="qr-modal-asset-id" id="qr-asset-id">—</div>
-    <div class="qr-modal-asset-name" id="qr-asset-name">—</div>
-    <div id="qr-canvas-wrap" style="margin:16px auto;width:220px;height:220px"></div>
-    <div class="qr-modal-actions">
-      <button class="btn btn-primary" onclick="openQRPrintFromModal()" id="qr-print-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h.01M14 17h3M17 14v3"/></svg>
-        พิมพ์ QR Label
-      </button>
-      <button class="btn btn-ghost btn-sm" onclick="downloadQR()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        บันทึก QR เดิม
-      </button>
-      <button class="qr-modal-close" onclick="closeQR()">ปิด</button>
+      <!-- Filter panel -->
+      <div class="filter-panel" id="filter-panel">
+        <div class="filter-panel-inner">
+          <div class="filter-row">
+            <div class="filter-group">
+              <label class="filter-label">กลุ่มทรัพย์สิน</label>
+              <select class="filter-select" id="fgrp" onchange="applyFilters()"><option value="">ทั้งหมด</option></select>
+            </div>
+            <div class="filter-group">
+              <label class="filter-label">สถานะ</label>
+              <select class="filter-select" id="fstat" onchange="applyFilters()">
+                <option value="">ทั้งหมด</option>
+                <option value="active">กำลังตัดค่าเสื่อม</option>
+                <option value="done">หมดอายุทางบัญชี</option>
+                <option value="future">ยังไม่เริ่มตัด</option>
+              </select>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="clearFilters()">ล้างตัวกรอง</button>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
 
-<!-- Main area -->
-<div class="main-area">
-  <!-- Top bar -->
-  <div class="main-topbar">
-    <button class="mob-back-btn" onclick="mobHome()" title="กลับหน้าหลัก">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
-    </button>
-    <div class="main-topbar-title" id="main-topbar-title">แผงควบคุม</div>
-    <div class="live-pill"><div class="live-dot"></div>LIVE</div>
-    <div class="top-clock mono" id="top-clock"></div>
-    <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="เปลี่ยนธีม">🌙</button>
-    <div class="user-chip" onclick="showLogout()" title="ออกจากระบบ">
-      <div class="user-chip-avatar" id="topbar-avatar">A</div>
-      <div class="user-chip-name" id="topbar-username">Admin</div>
+    <!-- List header -->
+    <div class="list-header">
+      <div class="list-count">
+        <span class="list-count-num" id="list-count-num">—</span>
+        <span>รายการ</span>
+      </div>
+      <div class="view-toggle">
+        <button class="view-btn active" id="view-card" onclick="setView('card')" title="Card view">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        </button>
+        <button class="view-btn" id="view-table" onclick="setView('table')" title="Table view">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+        </button>
+      </div>
     </div>
+
+    <!-- Card grid -->
+    <div id="card-grid" class="asset-grid"></div>
+
+    <!-- Table view -->
+    <div id="table-view" style="display:none">
+      <div class="card">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr>
+              <th>เลข Asset</th><th>ชื่อทรัพย์สิน</th>
+              <th>กลุ่ม</th><th class="r">มูลค่าคงเหลือ (บาท)</th>
+              <th>วันที่ได้มา</th><th>สถานะ</th>
+            </tr></thead>
+            <tbody id="list-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <!-- Scroll content -->
-  
+
+
+
+
 
 <script>
+
 
 
 
@@ -4840,6 +4139,17 @@ function init(){
 init();
 
 
+
 </script>
+
+<!-- GLOBAL MOBILE BOTTOM NAV -->
+<div id="mobile-bottom-nav-global">
+  <button class="mob-nav-item" onclick="mobHome()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="mob-nav-label">หน้าหลัก</span></button>
+  <button class="mob-nav-item" onclick="mobGoList('')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span class="mob-nav-label">รายการ</span></button>
+  <button class="mob-nav-item" onclick="mobScanQR()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg><span class="mob-nav-label">สแกน QR</span></button>
+  <button class="mob-nav-item" onclick="mobReports()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="mob-nav-label">รายงาน</span></button>
+  <button class="mob-nav-item" onclick="showAccountModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="mob-nav-label">บัญชี</span></button>
+</div>
+
 </body>
 </html>
