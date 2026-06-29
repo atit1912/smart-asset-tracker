@@ -3458,29 +3458,35 @@ function generateQRHighRes(a, baseUrl){
       ctx.fillStyle='#111827';
       ctx.font='bold '+(13*SCALE)+'px "Courier New",monospace';
       ctx.fillText(a.asset,W/2,40*SCALE);
-      // Asset name (auto-wrap)
+      // Asset name — max 2 lines, QR position dynamic below text
+      var name=a.desc||'';
+      var maxW=W-32*SCALE;
       ctx.font=(11*SCALE)+'px Arial,sans-serif';
       ctx.fillStyle='#374151';
-      var name=a.desc||'';
-      var maxW=W-40*SCALE;
-      if(ctx.measureText(name).width>maxW){
-        // Word wrap
-        var words=name.split('');
-        var line='';
-        var y=60*SCALE;
-        for(var wi=0;wi<words.length;wi++){
-          var test=line+words[wi];
-          if(ctx.measureText(test).width>maxW&&wi>0){
-            ctx.fillText(line,W/2,y);
-            line=words[wi]; y+=14*SCALE;
-          } else { line=test; }
-        }
-        ctx.fillText(line,W/2,y);
+      // Split into max 2 lines
+      var nameLines=[];
+      if(ctx.measureText(name).width<=maxW){
+        nameLines=[name];
       } else {
-        ctx.fillText(name,W/2,54*SCALE);
+        var l1='',chars=name.split('');
+        for(var ci=0;ci<chars.length;ci++){
+          if(ctx.measureText(l1+chars[ci]).width<=maxW) l1+=chars[ci];
+          else break;
+        }
+        var l2=name.slice(l1.length);
+        while(l2.length>0 && ctx.measureText(l2).width>maxW) l2=l2.slice(0,-1);
+        if(l2.length<name.slice(l1.length).length) l2=l2.slice(0,-1)+'…';
+        nameLines=l2?[l1,l2]:[l1];
       }
-      // QR image (centered)
-      var qrX=20*SCALE, qrY=66*SCALE, qrW=220*SCALE, qrH=220*SCALE;
+      var nameStartY=54*SCALE;
+      var lineH=13*SCALE;
+      nameLines.forEach(function(ln,i){ ctx.fillText(ln,W/2,nameStartY+i*lineH); });
+      // QR starts below last name line + padding
+      var qrStartY=nameStartY+(nameLines.length-1)*lineH+10*SCALE;
+      var qrAvail=H-qrStartY-10*SCALE;
+      var qrSize=Math.min(220*SCALE, Math.max(160*SCALE, qrAvail));
+      var qrX=Math.round((W-qrSize)/2);
+      var qrY=qrStartY, qrW=qrSize, qrH=qrSize;
       if(qrEl) ctx.drawImage(qrEl,qrX,qrY,qrW,qrH);
       // No border
       // Cleanup
