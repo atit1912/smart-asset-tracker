@@ -2013,6 +2013,7 @@ input, textarea, select { font-family: var(--font-thai); }
   padding-bottom: 90px;
 }
 body.mobile-home #mobile-landing { display: block; }
+body.mobile-home .main-area { display: none !important; }
 .mob-header {
   display: flex; align-items: center; gap: 12px;
   padding: 16px 18px; background: var(--primary-600, #1D4ED8); color: #fff;
@@ -2081,6 +2082,28 @@ body.mobile-home #mobile-landing { display: block; }
   .sidebar, .sidebar-toggle, .sidebar-backdrop { display: none !important; }
   .main-area { margin-left: 0 !important; }
 }
+
+
+/* QR Modal redesign */
+.qr-modal-brand {
+  font-size: 13px; font-weight: 800; letter-spacing: .15em;
+  text-transform: uppercase; color: var(--primary-500); margin-bottom: 8px;
+}
+.qr-modal-asset-id {
+  font-family: var(--font-mono); font-size: 22px; font-weight: 700;
+  color: var(--ink); letter-spacing: .04em; margin-bottom: 4px;
+}
+.qr-modal-asset-name {
+  font-size: 14px; color: var(--ink-2); font-weight: 500; line-height: 1.4;
+  max-width: 260px; text-align: center; margin: 0 auto;
+}
+.qr-modal-card {
+  background: var(--surface-0); border-radius: 20px;
+  padding: 24px 24px 20px; max-width: 300px; width: 100%;
+  box-shadow: var(--shadow-xl); text-align: center; border: 1px solid var(--border);
+}
+.qr-modal-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.qr-modal-actions .btn { justify-content: center; width: 100%; }
 
 </style>
 </head>
@@ -2377,11 +2400,21 @@ body.mobile-home #mobile-landing { display: block; }
 <!-- QR Modal -->
 <div class="qr-modal" id="qr-modal" onclick="closeQR(event)">
   <div class="qr-modal-card" onclick="event.stopPropagation()">
-    <div class="qr-modal-title" id="qr-title">QR Code</div>
-    <div class="qr-modal-sub" id="qr-sub">สแกนเพื่อเปิดหน้าทรัพย์สิน</div>
-    <div id="qr-canvas-wrap" style="margin:0 auto 16px;width:200px;height:200px"></div>
-    <div style="font-size:11px;color:var(--ink-4);word-break:break-all;margin-bottom:16px;padding:0 8px" id="qr-url-text"></div>
-    <button class="qr-modal-close" onclick="closeQR()">ปิด</button>
+    <div class="qr-modal-brand">CPF</div>
+    <div class="qr-modal-asset-id" id="qr-asset-id">—</div>
+    <div class="qr-modal-asset-name" id="qr-asset-name">—</div>
+    <div id="qr-canvas-wrap" style="margin:16px auto;width:220px;height:220px"></div>
+    <div class="qr-modal-actions">
+      <button class="btn btn-primary" onclick="openQRPrintFromModal()" id="qr-print-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h.01M14 17h3M17 14v3"/></svg>
+        พิมพ์ QR Label
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="downloadQR()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        บันทึก QR เดิม
+      </button>
+      <button class="qr-modal-close" onclick="closeQR()">ปิด</button>
+    </div>
   </div>
 </div>
 
@@ -3593,6 +3626,7 @@ function mobHome(){
   var first=document.querySelector('.mob-nav-item');
   if(first)first.classList.add('active');
   renderMobileLanding();
+  window.scrollTo(0,0);
 }
 
 
