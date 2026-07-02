@@ -2040,10 +2040,6 @@ input, textarea, select { font-family: var(--font-thai); }
   <div class="spinner"></div>
   <div class="loading-label" style="margin-top:16px">กำลังโหลดข้อมูล...</div>
 </div>
-<div id="loading">
-  <div class="spinner"></div>
-  <div class="loading-label">กำลังโหลดข้อมูล...</div>
-</div>
 
 <!-- Overlay -->
 <div id="overlay" onclick="closePanel()"></div>
@@ -2292,6 +2288,7 @@ async function doLogin(){
       _currentUser = { username: data.username, name: data.name, loginAt: data.loginAt };
       localStorage.setItem('sat_user', JSON.stringify(_currentUser));
       showApp(_currentUser);
+      initApp(); // load Firebase data after fresh login
     } else {
       showLoginError(data.error || 'เข้าสู่ระบบไม่สำเร็จ');
       btn.disabled = false;
@@ -2322,7 +2319,7 @@ function showApp(user){
     document.body.classList.add('mobile-home');
   }
   // Load data if not loaded yet
-  if(!ALL.length) initApp();
+  // (removed redundant initApp call to avoid double-fetch)
   // Update user chip
   var initial = (user.name||user.username||'A').charAt(0).toUpperCase();
   var av = document.getElementById('topbar-avatar');
@@ -3544,7 +3541,12 @@ async function initApp(){
       if(found) openPanel(found._docId||found.asset);
     }
   }catch(e){
-    document.getElementById('loading').innerHTML='<div style="text-align:center"><div style="font-size:40px;margin-bottom:12px">⚠️</div><div style="color:var(--danger-500);font-size:15px;font-weight:600">เชื่อมต่อ Firestore ไม่ได้<br><small style=\'color:var(--ink-3);font-weight:400\'>'+e.message+'</small></div></div>';
+    console.error('initApp error:', e);
+    var ldEl2=document.getElementById('loading');
+    if(ldEl2){
+      ldEl2.style.cssText='display:flex!important;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;';
+      ldEl2.innerHTML='<div style="text-align:center"><div style="font-size:40px;margin-bottom:12px">⚠️</div><div style="color:var(--danger-500);font-size:15px;font-weight:600">เชื่อมต่อ Firestore ไม่ได้<br><small style=\'color:var(--ink-3);font-weight:400\'>'+e.message+'</small></div></div>';
+    }
   }
 }
 
