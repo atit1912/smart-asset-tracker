@@ -18,6 +18,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════════
    PHASE 1 DESIGN SYSTEM — Enterprise Asset Management
@@ -1661,12 +1663,11 @@ input, textarea, select { font-family: var(--font-thai); }
 
 /* Responsive sidebar */
 @media (max-width: 900px) {
-  .sidebar { transform: translateX(-100%); }
-  .sidebar.open { transform: none; }
-  .sidebar-backdrop.open { display: block; }
-  .sidebar-toggle { display: flex; }
+  .sidebar { display: none !important; }
+  .sidebar-toggle { display: none !important; }
+  .sidebar-backdrop { display: none !important; }
   .main-area { margin-left: 0; }
-  .main-topbar { padding-left: 58px; }
+  .main-topbar { padding-left: 16px; }
   .dash-grid { grid-template-columns: 1fr; }
   .dash-kpi-row { grid-template-columns: 1fr 1fr; }
   .dash-chart-block, .dash-alert-block, .dash-table-block { grid-column: 1/-1; }
@@ -2073,6 +2074,13 @@ body.mobile-home #mobile-landing { display: block; }
 .mob-nav-item.active { color: var(--primary-500); }
 .mob-nav-item svg { width: 21px; height: 21px; }
 .mob-nav-label { font-size: 10px; font-weight: 600; }
+
+
+/* Sidebar hidden on mobile — always, regardless of breakpoint edge cases */
+@media (max-width: 768px) {
+  .sidebar, .sidebar-toggle, .sidebar-backdrop { display: none !important; }
+  .main-area { margin-left: 0 !important; }
+}
 
 </style>
 </head>
@@ -3637,25 +3645,46 @@ function mobExport(){ exportExcel(); }
 var _qrScanner = null;
 function mobScanQR(){
   document.getElementById('qr-scan-modal').classList.add('open');
-  if(typeof Html5Qrcode==='undefined'){
-    document.getElementById('qr-reader').innerHTML='<div style="padding:40px;text-align:center;color:rgba(255,255,255,.6)">กำลังโหลดตัวสแกน...<br>หากไม่ขึ้น ให้พิมพ์เลข Asset ด้านล่าง</div>';
-    return;
+  var readerEl = document.getElementById('qr-reader');
+
+  function startScanner(){
+    if(typeof Html5Qrcode==='undefined'){
+      readerEl.innerHTML='<div style="padding:40px;text-align:center;color:rgba(255,255,255,.6)">กำลังโหลดตัวสแกน กรุณารอสักครู่...<br>หากไม่ขึ้น ให้พิมพ์เลข Asset ด้านล่าง</div>';
+      // Retry after library loads (CDN may still be loading)
+      var tries = 0;
+      var retryTimer = setInterval(function(){
+        tries++;
+        if(typeof Html5Qrcode!=='undefined'){
+          clearInterval(retryTimer);
+          readerEl.innerHTML='';
+          startScanner();
+        } else if(tries>20){ // ~10s
+          clearInterval(retryTimer);
+          readerEl.innerHTML='<div style="padding:40px;text-align:center;color:rgba(255,255,255,.6)">โหลดตัวสแกนไม่สำเร็จ<br>กรุณาพิมพ์เลข Asset ด้านล่างแทน</div>';
+        }
+      },500);
+      return;
+    }
+    try{
+      _qrScanner = new Html5Qrcode('qr-reader');
+      _qrScanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 220, height: 220 } },
+        function(decodedText){
+          var assetId = decodedText;
+          var m = decodedText.match(/[?&]asset=([^&]+)/);
+          if(m) assetId = decodeURIComponent(m[1]);
+          qrFound(assetId);
+        },
+        function(err){ /* ignore per-frame scan errors */ }
+      ).catch(function(e){
+        readerEl.innerHTML='<div style="padding:40px;text-align:center;color:rgba(255,255,255,.6)">เปิดกล้องไม่ได้ กรุณาอนุญาตการใช้กล้องในเบราว์เซอร์<br><small style="opacity:.7">'+e+'</small><br><br>หรือพิมพ์เลข Asset ด้านล่างแทน</div>';
+      });
+    }catch(e){
+      readerEl.innerHTML='<div style="padding:40px;text-align:center;color:rgba(255,255,255,.6)">เกิดข้อผิดพลาด: '+e.message+'<br><br>กรุณาพิมพ์เลข Asset ด้านล่างแทน</div>';
+    }
   }
-  _qrScanner = new Html5Qrcode('qr-reader');
-  _qrScanner.start(
-    { facingMode: 'environment' },
-    { fps: 10, qrbox: { width: 220, height: 220 } },
-    function(decodedText){
-      // Extract asset ID from URL or use as-is
-      var assetId = decodedText;
-      var m = decodedText.match(/[?&]asset=([^&]+)/);
-      if(m) assetId = decodeURIComponent(m[1]);
-      qrFound(assetId);
-    },
-    function(err){ /* ignore scan errors */ }
-  ).catch(function(e){
-    document.getElementById('qr-reader').innerHTML='<div style="padding:40px;text-align:center;color:rgba(255,255,255,.6)">เปิดกล้องไม่ได้: '+e+'<br><br>กรุณาพิมพ์เลข Asset ด้านล่าง</div>';
-  });
+  startScanner();
 }
 
 function qrFound(assetId){
