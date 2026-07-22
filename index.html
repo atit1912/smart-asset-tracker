@@ -1066,7 +1066,10 @@ input, textarea, select { font-family: var(--font-thai); }
 }
 .ptab-scroll {
   flex: 1; overflow-y: auto;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
 }
+/* ซ่อนแถบเมนูล่างขณะเปิดแผงรายละเอียด (กันทับปุ่มบันทึก) */
+body.panel-open #mobile-bottom-nav-global { display: none !important; }
 .panel-tabs::-webkit-scrollbar { display: none; }
 .ptab {
   flex-shrink: 0; padding: 12px 20px;
@@ -2935,6 +2938,7 @@ async function openPanel(assetId){
   document.getElementById('panel').classList.add('open');
   document.getElementById('overlay').classList.add('show');
   document.body.style.overflow='hidden';
+  document.body.classList.add('panel-open');
   if(liveTimer)clearInterval(liveTimer);
   liveTimer=setInterval(function(){tickPanel(a);},1000);
 
@@ -3058,7 +3062,7 @@ function renderPanel(a,meta){
       +'<div class="form-field"><label class="form-label">หมายเหตุ</label>'
         +'<textarea class="form-textarea" id="d-note" placeholder="เช่น ย้ายมาจากโรงเรือน 3 เมื่อ มี.ค. 2026">'+esc(note)+'</textarea></div>'
       +'<div class="form-actions">'
-        +'<button class="btn btn-success" onclick="saveMeta('+esc(docId)+')">บันทึก</button>'
+        +'<button class="btn btn-success" onclick="saveMeta(\''+esc(docId)+'\')">บันทึก</button>'
         +'<span class="save-confirm" id="d-saved">✓ บันทึกแล้ว ทุกคนเห็นแล้ว</span>'
       +'</div>'
     +'</div>'
@@ -3077,6 +3081,7 @@ function closePanel(){
   document.getElementById('panel').classList.remove('open');
   document.getElementById('overlay').classList.remove('show');
   document.body.style.overflow='';
+  document.body.classList.remove('panel-open');
   if(liveTimer){clearInterval(liveTimer);liveTimer=null;}
   currentAsset=null;
 }
@@ -3327,12 +3332,12 @@ function renderPhotos(docId, photos){
       +'<button class="btn btn-ghost btn-sm" style="position:relative;overflow:hidden">'
         +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
         +'เลือกจากแกลเลอรี'
-        +'<input type="file" accept="image/*" multiple onchange="handlePhotoUpload(event,'+docId+')">'
+        +'<input type="file" accept="image/*" multiple onchange="handlePhotoUpload(event,\''+docId+'\')">'
       +'</button>'
       +'<button class="btn btn-primary btn-sm" style="position:relative;overflow:hidden">'
         +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 0 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'
         +'ถ่ายรูป'
-        +'<input type="file" accept="image/*" capture="environment" onchange="handlePhotoUpload(event,'+docId+')">'
+        +'<input type="file" accept="image/*" capture="environment" onchange="handlePhotoUpload(event,\''+docId+'\')">'
       +'</button>'
     +'</div>'
     // Grid
@@ -3342,7 +3347,7 @@ function renderPhotos(docId, photos){
             +'<img src="'+p+'" alt="photo '+(i+1)+'" loading="lazy">'
             +(i===0?'<div class="photo-cover-badge">Cover</div>':'')
             +'<div class="photo-item-overlay">'
-              +'<button class="photo-del-btn" onclick="deletePhoto(event,'+docId+','+i+')">'
+              +'<button class="photo-del-btn" onclick="deletePhoto(event,\''+docId+'\','+i+')">'
                 +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>'
               +'</button>'
             +'</div>'
@@ -3492,7 +3497,7 @@ function renderTimeline(docId, events){
     +'<div class="tl-entry-row">'
       +'<input class="tl-desc-input" id="tl-desc" placeholder="รายละเอียด เช่น ย้ายไปโรงเรือน B...">'
     +'</div>'
-    +'<button class="btn btn-primary tl-add-btn" onclick="addTimelineEvent('+esc(docId)+')">'
+    +'<button class="btn btn-primary tl-add-btn" onclick="addTimelineEvent(\''+esc(docId)+'\')">'
       +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>'
       +'เพิ่มบันทึก'
     +'</button>'
